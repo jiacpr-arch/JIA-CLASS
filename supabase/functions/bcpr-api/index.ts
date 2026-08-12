@@ -1,13 +1,26 @@
 // bcpr-api — backend สำหรับระบบจองคอร์ส B-CPR (JIA-CLASS)
 // public: list_classes, create_booking, verify_cert
-// admin (header x-admin-key = ADMIN_API_KEY): จัดการรอบอบรม/การจอง/ใบเซอร์ เฉพาะ course_key='B-CPR' / channel='bcpr-web'
+// admin (header x-admin-key): จัดการรอบอบรม/การจอง/ใบเซอร์ เฉพาะ course_key='B-CPR' / channel='bcpr-web'
+// รหัสแอดมินเป็นของระบบ B-CPR โดยเฉพาะ (แยกจาก ADMIN_API_KEY เดิมของ cpr.morroo.com/admin)
+// เก็บเป็น SHA-256 hash ในตาราง bcpr_admin_auth (RLS ปิดสนิท เข้าถึงได้เฉพาะ service role)
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ADMIN_KEY = Deno.env.get("ADMIN_API_KEY") ?? "";
 
 const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+
+async function sha256Hex(text: string): Promise<string> {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(bytes)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function isValidAdminKey(key: string): Promise<boolean> {
+  if (!key) return false;
+  const { data, error } = await db.from("bcpr_admin_auth").select("key_hash").eq("id", true).maybeSingle();
+  if (error || !data) return false;
+  return timingSafeEq(await sha256Hex(key), data.key_hash);
+}
 
 const COURSE_KEY = "B-CPR";
 const COURSE_NAME = "B-CPR การช่วยชีวิตขั้นพื้นฐานสำหรับประชาชน";
@@ -352,7 +365,7 @@ Deno.serve(async (req: Request) => {
     // admin
     if (action.startsWith("admin_")) {
       const key = req.headers.get("x-admin-key") ?? "";
-      if (!ADMIN_KEY || !timingSafeEq(key, ADMIN_KEY)) return json({ ok: false, error: "UNAUTHORIZED" }, 401);
+      if (!(await isValidAdminKey(key))) return json({ ok: false, error: "UNAUTHORIZED" }, 401);
       switch (action) {
         case "admin_ping": return json({ ok: true });
         case "admin_list_classes": return await adminListClasses();
