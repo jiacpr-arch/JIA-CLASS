@@ -111,7 +111,23 @@ tr:hover td{background:#FBFCFE}
   <!-- bookings -->
   <div id="view-bookings" style="display:none">
     <div class="card">
-      <h3>รายการจอง <span class="muted">(ช่องทางเว็บ B-CPR)</span></h3>
+      <h3>ลงจองแทนลูกค้า <span class="muted">(จองผ่านเซลล์ / โทรศัพท์ / หน้างาน)</span></h3>
+      <div class="grid c4" style="margin-top:6px">
+        <div style="grid-column:1/-1"><label>รอบเรียน</label><select id="mbClass"><option value="">— เลือกรอบเรียน —</option></select></div>
+        <div><label>ชื่อผู้จอง</label><input id="mbName" placeholder="ชื่อ-นามสกุล / บริษัท"></div>
+        <div><label>เบอร์โทร</label><input id="mbTel" placeholder="08x-xxx-xxxx"></div>
+        <div><label>อีเมล (ไม่บังคับ)</label><input id="mbEmail" type="email"></div>
+        <div><label>จำนวนคน</label><input id="mbPeople" type="number" value="1" min="1" max="100" oninput="mbSuggestPrice()"></div>
+        <div><label>ยอดรวม (บาท)</label><input id="mbPrice" type="number" min="0" value="600"><span class="muted">แก้ไขได้ กรณีมีส่วนลด/ราคาพิเศษ</span></div>
+        <div><label>ช่องทางชำระ</label><select id="mbPayMode"><option>โอนเงิน</option><option>เงินสด</option><option>PromptPay</option><option>ใบแจ้งหนี้</option><option>อื่นๆ</option></select></div>
+        <div><label>สถานะการชำระ</label><select id="mbStatus"><option value="ชำระแล้ว">ชำระแล้ว</option><option value="รอตรวจสอบ">รอตรวจสอบ (ยังไม่ได้เงิน)</option></select></div>
+      </div>
+      <div style="margin-top:10px"><label>หมายเหตุ</label><input id="mbNote" placeholder="เช่น จองผ่านเซลล์คุณ… / เลขอ้างอิงใบแจ้งหนี้ (ไม่บังคับ)"></div>
+      <div style="margin-top:10px"><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="mbPdpa" style="width:auto"> ลูกค้ารับทราบและยินยอมให้เก็บข้อมูลส่วนบุคคล (PDPA) ผ่านเซลล์/ผู้ติดต่อแล้ว</label></div>
+      <div style="margin-top:12px"><button class="btn-gold" onclick="manualBooking()">+ บันทึกการจอง</button></div>
+    </div>
+    <div class="card">
+      <h3>รายการจอง <span class="muted">(เว็บ B-CPR + แอดมินลงเอง)</span></h3>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
         <select id="bkFilter" style="max-width:220px" onchange="loadBookings()">
           <option value="">ทุกสถานะ</option>
@@ -144,6 +160,7 @@ tr:hover td{background:#FBFCFE}
       <ol style="margin:10px 0 0 20px;line-height:1.9">
         <li><b>เปิดรอบอบรม</b> — แท็บ 📅 รอบอบรม → กรอกวันที่/เวลา/จำนวนรับ → กด <span class="chip ref">+ เปิดรอบนี้</span> ลูกค้าจะเห็นและจองได้ทันที</li>
         <li><b>ตรวจสลิปและอนุมัติ</b> — แท็บ 🎟️ การจอง → กรองสถานะ <span class="chip ref">รอตรวจสอบ</span> → กด <span class="chip ref">ดูสลิป</span> เทียบยอดให้ตรง (600 บาท × จำนวนคน) → กด <span class="chip ref">อนุมัติ</span> หรือ <span class="chip ref">ปฏิเสธ</span></li>
+        <li><b>ลงจองแทนลูกค้า (จองผ่านเซลล์/โทร/หน้างาน)</b> — แท็บ 🎟️ การจอง → ฟอร์ม <span class="chip ref">ลงจองแทนลูกค้า</span> ด้านบน → เลือกรอบ กรอกชื่อ-เบอร์-จำนวนคน ปรับยอดได้กรณีราคาพิเศษ → เลือกสถานะ <span class="chip ref">ชำระแล้ว</span> ถ้าได้รับเงินแล้ว หรือ <span class="chip ref">รอตรวจสอบ</span> ถ้ายังไม่ได้เงิน รายการจะติดป้าย "แอดมิน/เซลล์" และตัดที่นั่งจากรอบเดียวกับการจองหน้าเว็บ</li>
         <li><b>เช็คชื่อวันอบรม</b> — แท็บ 🎟️ การจอง → กด <span class="chip ref">เช็คชื่อ</span> ให้รายการที่ลูกค้ามาเข้าเรียนจริง</li>
         <li><b>ออกใบเซอร์</b> — ออกได้เฉพาะรายการที่ <span class="chip ref">ชำระแล้ว</span> → กด <span class="chip ref">ออกใบเซอร์</span> → พิมพ์ชื่อผู้ผ่านอบรม 1 คน/บรรทัด (ใบเซอร์มีอายุ 2 ปีอัตโนมัติ)</li>
       </ol>
@@ -153,6 +170,7 @@ tr:hover td{background:#FBFCFE}
       <p style="margin-top:8px"><b>หน้าจองของลูกค้าว่างเปล่า</b> — ยังไม่ได้เปิดรอบอบรมเลย ไปแท็บ 📅 รอบอบรม แล้วเปิดรอบใหม่</p>
       <p style="margin-top:10px"><b>ลูกค้าโอนเงินผิดยอด</b> — อย่าเพิ่งกดอนุมัติ ทักไปสอบถามลูกค้าทาง LINE @jiacpr ก่อนเสมอ</p>
       <p style="margin-top:10px"><b>กดออกใบเซอร์ไม่ได้</b> — ต้องเป็นรายการที่สถานะ <span class="chip ref">ชำระแล้ว</span> เท่านั้น</p>
+      <p style="margin-top:10px"><b>จะรู้ได้อย่างไรว่ามีลูกค้าจองเข้ามา</b> — ระบบส่งแจ้งเตือนอัตโนมัติเข้า LINE ทีมงานและ/หรืออีเมลทันทีที่มีการจองใหม่ (ต้องตั้งค่าครั้งแรกตามคู่มือ docs/NOTIFICATIONS.md) และดูรายการทั้งหมดได้ที่แท็บ 🎟️ การจอง</p>
     </div>
     <div class="card">
       <h3>คู่มือฉบับเต็ม (PDF)</h3>
@@ -239,9 +257,16 @@ function showTab(name){
 }
 
 /* ---------- classes ---------- */
+const PRICE_PER_PERSON = 600;
 async function loadClasses(){
   const r = await api('admin_list_classes');
   if(!r.ok) return toast('โหลดรอบอบรมไม่สำเร็จ');
+  const today = new Date().toISOString().slice(0,10);
+  const open = r.classes.filter(c=>c.status==='ready' && c.date>=today);
+  const cur = document.getElementById('mbClass').value;
+  document.getElementById('mbClass').innerHTML = '<option value="">— เลือกรอบเรียน —</option>' +
+    open.map(c=>`<option value="${esc(c.id)}">${thDate(c.date)} ${esc(c.time_slot)} (จองแล้ว ${c.booked}/${c.max_students})</option>`).join('');
+  if(cur) document.getElementById('mbClass').value = cur;
   const chip = s => s==='ready'?'<span class="chip ready">เปิดรับ</span>'
     : s==='cancelled'?'<span class="chip off">ปิด/ยกเลิก</span>'
     : s==='full'?'<span class="chip wait">เต็ม</span>'
@@ -275,6 +300,39 @@ async function setClassStatus(id, status){
 }
 
 /* ---------- bookings ---------- */
+function mbSuggestPrice(){
+  const p = parseInt(document.getElementById('mbPeople').value,10);
+  if(Number.isInteger(p) && p>0) document.getElementById('mbPrice').value = p*PRICE_PER_PERSON;
+}
+async function manualBooking(){
+  const body = {
+    class_id: document.getElementById('mbClass').value,
+    name: document.getElementById('mbName').value.trim(),
+    tel: document.getElementById('mbTel').value.trim(),
+    email: document.getElementById('mbEmail').value.trim(),
+    people: parseInt(document.getElementById('mbPeople').value,10),
+    final_price: document.getElementById('mbPrice').value,
+    payment_mode: document.getElementById('mbPayMode').value,
+    payment_status: document.getElementById('mbStatus').value,
+    note: document.getElementById('mbNote').value.trim(),
+  };
+  if(!body.class_id) return toast('กรุณาเลือกรอบเรียน');
+  if(!body.name) return toast('กรุณากรอกชื่อผู้จอง');
+  if(!/^[0-9+\-() ]{8,20}$/.test(body.tel)) return toast('เบอร์โทรไม่ถูกต้อง');
+  if(!Number.isInteger(body.people) || body.people<1) return toast('จำนวนคนไม่ถูกต้อง');
+  if(!document.getElementById('mbPdpa').checked) return toast('กรุณาติ๊กยืนยันความยินยอม PDPA ของลูกค้า');
+  const r = await api('admin_create_booking', body);
+  if(!r.ok){
+    if(r.error==='FULL') return toast('รอบนี้ที่นั่งไม่พอ (เหลือ '+(r.seats_left??0)+' ที่)');
+    if(r.error==='CLASS_NOT_OPEN') return toast('รอบนี้ปิดรับแล้ว');
+    return toast('ผิดพลาด: '+(r.error||''));
+  }
+  toast('บันทึกการจองแล้ว (เลขที่ '+r.booking_id+')');
+  for(const id of ['mbName','mbTel','mbEmail','mbNote']) document.getElementById(id).value='';
+  document.getElementById('mbPeople').value=1; mbSuggestPrice();
+  document.getElementById('mbPdpa').checked=false;
+  loadBookings(); loadClasses();
+}
 async function loadBookings(){
   const f = document.getElementById('bkFilter').value;
   const r = await api('admin_list_bookings', f?{payment_status:f}:{});
@@ -284,7 +342,7 @@ async function loadBookings(){
     : '<span class="chip off">'+esc(s)+'</span>';
   document.querySelector('#tblBookings tbody').innerHTML = r.bookings.map(b=>`<tr>
     <td class="muted">${thDateTime(b.created_at)}</td>
-    <td><b>${esc(b.name)}</b></td>
+    <td><b>${esc(b.name)}</b>${b.channel==='bcpr-admin'?'<br><span class="chip done">แอดมิน/เซลล์'+(b.payment_mode?' · '+esc(b.payment_mode):'')+'</span>':''}</td>
     <td>${esc(b.tel)}${b.email?'<br><span class="muted">'+esc(b.email)+'</span>':''}</td>
     <td>${thDate(b.start_date)}<br><span class="muted">${esc(b.time_slot)}</span></td>
     <td>${b.total_people}</td>

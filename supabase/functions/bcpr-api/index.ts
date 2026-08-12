@@ -1,6 +1,7 @@
 // bcpr-api — backend สำหรับระบบจองคอร์ส B-CPR (JIA-CLASS)
 // public: list_classes, create_booking, verify_cert
-// admin (header x-admin-key): จัดการรอบอบรม/การจอง/ใบเซอร์ เฉพาะ course_key='B-CPR' / channel='bcpr-web'
+// admin (header x-admin-key): จัดการรอบอบรม/การจอง/ใบเซอร์ เฉพาะ course_key='B-CPR' / channel bcpr-web + bcpr-admin
+// แจ้งเตือนการจองใหม่ผ่าน LINE OA / อีเมล — ดู docs/NOTIFICATIONS.md และ block "notifications" ด้านล่าง
 // รหัสแอดมินเป็นของระบบ B-CPR โดยเฉพาะ (แยกจาก ADMIN_API_KEY เดิมของ cpr.morroo.com/admin)
 // เก็บเป็น SHA-256 hash ในตาราง bcpr_admin_auth (RLS ปิดสนิท เข้าถึงได้เฉพาะ service role)
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -25,6 +26,8 @@ async function isValidAdminKey(key: string): Promise<boolean> {
 const COURSE_KEY = "B-CPR";
 const COURSE_NAME = "B-CPR การช่วยชีวิตขั้นพื้นฐานสำหรับประชาชน";
 const CHANNEL = "bcpr-web";
+const ADMIN_CHANNEL = "bcpr-admin"; // จองที่แอดมิน/เซลล์ลงแทนลูกค้า
+const ADMIN_CHANNELS = [CHANNEL, ADMIN_CHANNEL];
 const SLIP_BUCKET = "slips";
 const SLIP_PREFIX = "bcpr/";
 const HOLD_STATUSES = ["รอตรวจสอบ", "ชำระแล้ว"];
@@ -54,6 +57,75 @@ function certExpiry(issuedAt: string): string {
   const d = new Date(issuedAt);
   d.setFullYear(d.getFullYear() + CERT_VALID_YEARS);
   return d.toISOString();
+}
+
+// ---------- notifications (แจ้งทีมงานเมื่อมีการจองใหม่) ----------
+// ตั้งค่า secrets ใน Supabase (ตั้งอย่างน้อย 1 ช่องทาง ไม่ตั้งเลย = ไม่แจ้งเตือน):
+//   LINE_CHANNEL_ACCESS_TOKEN + LINE_NOTIFY_TO  → แจ้งผ่าน LINE OA (push ไปยัง userId/groupId ของทีมงาน)
+//   RESEND_API_KEY + NOTIFY_EMAIL_TO            → แจ้งผ่านอีเมล (Resend), NOTIFY_EMAIL_FROM (ไม่บังคับ)
+const LINE_TOKEN = Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN") ?? "";
+const LINE_TO = Deno.env.get("LINE_NOTIFY_TO") ?? "";
+const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const EMAIL_TO = Deno.env.get("NOTIFY_EMAIL_TO") ?? "";
+const EMAIL_FROM = Deno.env.get("NOTIFY_EMAIL_FROM") || "B-CPR Booking <onboarding@resend.dev>";
+const ADMIN_PAGE_URL = "https://class.morroo.com/bcpr-admin.html";
+
+type BookingNotify = {
+  source: "web" | "admin";
+  bookingId: string;
+  name: string;
+  tel: string;
+  people: number;
+  total: number;
+  date?: string;
+  timeSlot?: string;
+  paymentStatus: string;
+  note?: string;
+};
+
+function notifyText(n: BookingNotify): string {
+  const lines = [
+    n.source === "web" ? "🔔 มีการจองใหม่จากหน้าเว็บ (B-CPR)" : "📝 แอดมิน/เซลล์ลงจองใหม่ (B-CPR)",
+    `ชื่อ: ${n.name}`,
+    `โทร: ${n.tel}`,
+    `รอบเรียน: ${n.date ?? "-"} ${n.timeSlot ?? ""}`.trim(),
+    `จำนวน: ${n.people} คน | ยอด: ${n.total.toLocaleString("th-TH")} บาท`,
+    `สถานะ: ${n.paymentStatus}`,
+  ];
+  if (n.note) lines.push(`หมายเหตุ: ${n.note}`);
+  lines.push(`เลขที่จอง: ${n.bookingId}`);
+  if (n.source === "web") lines.push(`ตรวจสลิป/อนุมัติได้ที่ ${ADMIN_PAGE_URL}`);
+  return lines.join("\n");
+}
+
+async function sendLineNotify(text: string): Promise<void> {
+  if (!LINE_TOKEN || !LINE_TO) return;
+  const res = await fetch("https://api.line.me/v2/bot/message/push", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${LINE_TOKEN}` },
+    body: JSON.stringify({ to: LINE_TO, messages: [{ type: "text", text }] }),
+  });
+  if (!res.ok) console.error("LINE notify failed", res.status, await res.text().catch(() => ""));
+}
+
+async function sendEmailNotify(subject: string, text: string): Promise<void> {
+  if (!RESEND_KEY || !EMAIL_TO) return;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_KEY}` },
+    body: JSON.stringify({ from: EMAIL_FROM, to: [EMAIL_TO], subject, text }),
+  });
+  if (!res.ok) console.error("Email notify failed", res.status, await res.text().catch(() => ""));
+}
+
+// ส่งแจ้งเตือนแบบไม่บล็อกการตอบกลับลูกค้า และไม่ทำให้การจองล้มถ้าส่งไม่สำเร็จ
+function notifyNewBooking(n: BookingNotify): void {
+  const text = notifyText(n);
+  const subject = `${n.source === "web" ? "🔔 จองใหม่" : "📝 แอดมินลงจอง"} B-CPR: ${n.name} (${n.people} คน)`;
+  const job = Promise.allSettled([sendLineNotify(text), sendEmailNotify(subject, text)]);
+  // deno-lint-ignore no-explicit-any
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(job);
 }
 
 async function seatsTaken(classIds: string[]): Promise<Record<string, number>> {
@@ -150,6 +222,10 @@ async function createBooking(body: Record<string, unknown>) {
     await db.storage.from(SLIP_BUCKET).remove([slipPath]).catch(() => {});
     return json({ ok: false, error: data?.error ?? "BOOKING_FAILED", seats_left: data?.seats_left }, 409);
   }
+  notifyNewBooking({
+    source: "web", bookingId, name, tel, people, total: Number(data.total ?? 0),
+    date: data.date, timeSlot: data.time_slot, paymentStatus: "รอตรวจสอบสลิป", note,
+  });
   return json({ ok: true, booking_id: bookingId, status: "รอตรวจสอบ", total: data.total });
 }
 
@@ -234,8 +310,8 @@ async function adminUpdateClass(body: Record<string, unknown>) {
 
 async function adminListBookings(body: Record<string, unknown>) {
   let q = db.from("bookings")
-    .select("id,name,tel,email,class_id,total_people,final_price,payment_slip,payment_status,start_date,time_slot,note,attended_at,created_at")
-    .eq("channel", CHANNEL).order("created_at", { ascending: false }).limit(500);
+    .select("id,name,tel,email,class_id,channel,total_people,final_price,payment_mode,payment_slip,payment_status,start_date,time_slot,note,attended_at,created_at")
+    .in("channel", ADMIN_CHANNELS).order("created_at", { ascending: false }).limit(500);
   if (body.class_id) q = q.eq("class_id", String(body.class_id));
   if (body.payment_status) q = q.eq("payment_status", String(body.payment_status));
   const { data, error } = await q;
@@ -265,10 +341,49 @@ async function adminUpdateBooking(body: Record<string, unknown>) {
   if (patchIn.note !== undefined) patch.note = String(patchIn.note).trim();
   if (Object.keys(patch).length === 0) return json({ ok: false, error: "EMPTY_PATCH" }, 400);
   const { data, error } = await db.from("bookings").update(patch)
-    .eq("id", id).eq("channel", CHANNEL).select("id");
+    .eq("id", id).in("channel", ADMIN_CHANNELS).select("id");
   if (error) throw error;
   if (!data?.length) return json({ ok: false, error: "NOT_FOUND" }, 404);
   return json({ ok: true });
+}
+
+// ลงจองแทนลูกค้า (จองผ่านเซลล์/โทร/หน้างาน) — ไม่บังคับสลิป กำหนดราคา/สถานะ/ช่องทางชำระได้
+async function adminCreateBooking(body: Record<string, unknown>) {
+  const name = String(body.name ?? "").trim();
+  const tel = String(body.tel ?? "").trim();
+  const email = String(body.email ?? "").trim();
+  const note = String(body.note ?? "").trim().slice(0, 500);
+  const classId = String(body.class_id ?? "");
+  const people = Number(body.people ?? 0);
+  const paymentMode = String(body.payment_mode ?? "").trim().slice(0, 50);
+  const paymentStatus = String(body.payment_status ?? "");
+  const priceRaw = body.final_price;
+  const finalPrice = priceRaw === undefined || priceRaw === null || priceRaw === "" ? null : Number(priceRaw);
+
+  if (!name || name.length > 200) return json({ ok: false, error: "INVALID_NAME" }, 400);
+  if (!/^[0-9+\-() ]{8,20}$/.test(tel)) return json({ ok: false, error: "INVALID_TEL" }, 400);
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ ok: false, error: "INVALID_EMAIL" }, 400);
+  if (!classId) return json({ ok: false, error: "INVALID_CLASS" }, 400);
+  if (!Number.isInteger(people) || people < 1 || people > 100) return json({ ok: false, error: "INVALID_PEOPLE" }, 400);
+  if (!["รอตรวจสอบ", "ชำระแล้ว"].includes(paymentStatus)) return json({ ok: false, error: "INVALID_STATUS" }, 400);
+  if (finalPrice !== null && (!Number.isFinite(finalPrice) || finalPrice < 0 || finalPrice > 1_000_000)) {
+    return json({ ok: false, error: "INVALID_PRICE" }, 400);
+  }
+
+  const bookingId = genId();
+  const { data, error } = await db.rpc("bcpr_admin_create_booking", {
+    p_id: bookingId, p_class_id: classId, p_name: name, p_tel: tel, p_email: email,
+    p_people: people, p_note: note, p_course_name: COURSE_NAME,
+    p_final_price: finalPrice, p_payment_mode: paymentMode, p_payment_status: paymentStatus,
+  });
+  if (error) return json({ ok: false, error: "BOOKING_FAILED" }, 500);
+  if (!data?.ok) return json({ ok: false, error: data?.error ?? "BOOKING_FAILED", seats_left: data?.seats_left }, 409);
+
+  notifyNewBooking({
+    source: "admin", bookingId, name, tel, people, total: Number(data.total ?? 0),
+    date: data.date, timeSlot: data.time_slot, paymentStatus, note,
+  });
+  return json({ ok: true, booking_id: bookingId, status: paymentStatus, total: data.total });
 }
 
 async function nextCertCode(): Promise<string> {
@@ -288,7 +403,7 @@ async function adminIssueCert(body: Record<string, unknown>) {
   if (!attendees.length || attendees.length > 20) return json({ ok: false, error: "INVALID_ATTENDEES" }, 400);
 
   const { data: booking, error: bErr } = await db.from("bookings")
-    .select("id,payment_status").eq("id", bookingId).eq("channel", CHANNEL).maybeSingle();
+    .select("id,payment_status").eq("id", bookingId).in("channel", ADMIN_CHANNELS).maybeSingle();
   if (bErr) throw bErr;
   if (!booking) return json({ ok: false, error: "BOOKING_NOT_FOUND" }, 404);
   if (booking.payment_status !== "ชำระแล้ว") return json({ ok: false, error: "NOT_PAID" }, 400);
@@ -372,6 +487,7 @@ Deno.serve(async (req: Request) => {
         case "admin_create_class": return await adminCreateClass(body);
         case "admin_update_class": return await adminUpdateClass(body);
         case "admin_list_bookings": return await adminListBookings(body);
+        case "admin_create_booking": return await adminCreateBooking(body);
         case "admin_sign_slip": return await adminSignSlip(body);
         case "admin_update_booking": return await adminUpdateBooking(body);
         case "admin_issue_cert": return await adminIssueCert(body);
