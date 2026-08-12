@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ตรวจสอบใบรับรอง B-CPR | JIA TRAINER CENTER</title>
+<meta name="description" content="ตรวจสอบใบรับรองผู้ผ่านการฝึกอบรมหลักสูตรการกู้ชีพขั้นพื้นฐาน (B-CPR)">
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+:root{
+  --navy:#1A2B5C; --navy-dark:#0E1A3E; --navy-grad:linear-gradient(135deg,#1A2B5C 0%,#0E1A3E 100%);
+  --gold:#F5C518; --gold-dark:#D4A50F; --ink:#22304F;
+  --bg:#F6F8FC; --card:#fff; --line:#E3E8F2;
+  --ok:#2E7D32; --bad:#C62828;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun',sans-serif;color:var(--ink);background:var(--bg);line-height:1.7}
+a{color:var(--navy)}
+.container{max-width:640px;margin:0 auto;padding:0 16px}
+.hero{background:var(--navy-grad);color:#fff;padding:26px 16px;text-align:center}
+.hero h1{font-size:1.35em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px;margin:20px 0}
+.badge{font-size:2.6em;text-align:center}
+.status-ok{color:var(--ok);font-weight:700;text-align:center;font-size:1.2em}
+.status-bad{color:var(--bad);font-weight:700;text-align:center;font-size:1.2em}
+.row{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--line);font-size:.95em}
+.row:last-child{border-bottom:none}
+.row .k{color:#7A88A8;flex:none}
+.row .v{font-weight:600;text-align:right}
+.searchbox{display:flex;gap:8px;margin-top:10px}
+.searchbox input{flex:1;font-family:inherit;font-size:1em;padding:11px 13px;border:1px solid var(--line);border-radius:9px;text-transform:uppercase}
+.btn{border:none;border-radius:9px;padding:11px 20px;font-size:1em;font-weight:700;cursor:pointer;font-family:inherit;background:var(--gold);color:var(--navy)}
+.btn:hover{background:var(--gold-dark)}
+.muted{color:#7A88A8;font-size:.85em}
+.footer{text-align:center;font-size:.85em;color:#7A88A8;padding:22px 16px}
+.printbar{text-align:center;margin:14px 0}
+
+/* ---------- printable certificate (A4 landscape) ---------- */
+#certSheet{display:none}
+.sheet{
+  width:1122px;height:793px;margin:20px auto;background:#fff;position:relative;
+  border:14px solid var(--navy);outline:3px solid var(--gold);outline-offset:-22px;
+  padding:70px 80px;text-align:center;font-family:'Sarabun',sans-serif;color:var(--ink);
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.sheet .seal{width:60px;height:60px;border-radius:50%;background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85em;margin:0 auto 8px;border:2px solid var(--gold)}
+.sheet .org{font-size:1.15em;font-weight:700;color:var(--navy)}
+.sheet .org small{display:block;font-weight:400;color:#5B6B90;font-size:.75em}
+.sheet .present{font-size:1em;color:#5B6B90;margin-top:10px;line-height:1.5}
+.sheet .lname{font-size:2.6em;font-weight:700;color:var(--navy);border-bottom:3px solid var(--gold);display:inline-block;padding:0 34px 6px;margin:8px auto}
+.sheet .ctitle{font-size:1.25em;font-weight:600;margin-top:8px}
+.sheet .ctitle small{display:block;font-weight:400;font-size:.8em;color:#5B6B90}
+.sheet .sign{margin-top:16px;font-size:.85em;color:#5B6B90;display:flex;flex-direction:column;align-items:center}
+.sheet .sign .line{width:230px;border-bottom:1px solid #5B6B90;height:26px}
+.sheet .meta{display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px;text-align:left}
+.sheet .meta .qr{background:#fff;padding:6px;border:1px solid var(--line)}
+.sheet .meta .ids{font-size:.9em;color:#5B6B90;text-align:right}
+.sheet .meta .ids b{color:var(--ink)}
+@media print{
+  body{background:#fff}
+  .hero,.container,.footer,.printbar{display:none !important}
+  #certSheet{display:block !important}
+  .sheet{margin:0;width:100%;height:100vh;border-width:12px}
+  @page{size:A4 landscape;margin:0}
+}
+@media screen{
+  #certSheet.showOnScreen{display:block;overflow-x:auto}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>ตรวจสอบใบรับรอง B-CPR</h1>
+  <p style="opacity:.8;font-size:.9em">หลักสูตรการกู้ชีพขั้นพื้นฐาน (Basic Cardiopulmonary Resuscitation)</p>
+</div>
+
+<div class="container">
+  <div class="card" id="searchCard">
+    <b>กรอกเลขที่ใบรับรอง</b>
+    <div class="searchbox">
+      <input id="codeInput" placeholder="BCPR-2569-0001 หรือ BCPR-2026-0001" onkeydown="if(event.key==='Enter')doVerify()">
+      <button class="btn" onclick="doVerify()">ตรวจสอบ</button>
+    </div>
+    <p class="muted" style="margin-top:6px">เลขที่ใบรับรองอยู่บนใบเซอร์ หรือสแกน QR บนใบเซอร์เพื่อเปิดหน้านี้อัตโนมัติ</p>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none"></div>
+  <div class="printbar" id="printBar" style="display:none">
+    <button class="btn" onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button>
+  </div>
+</div>
+
+<!-- printable sheet -->
+<div id="certSheet">
+  <div class="sheet">
+    <div>
+      <div class="seal">สพฉ.</div>
+      <div class="org">บริษัท เจี่ยรักษา จำกัด — JIA TRAINER CENTER
+        <small>ศูนย์การเรียนรู้ชุมชนที่ได้รับการรับรองจากสถาบันการแพทย์ฉุกเฉินแห่งชาติ (สพฉ.) เลขที่ศูนย์ LC210002</small>
+      </div>
+      <div class="present">ขอมอบใบรับรองผลการฝึกอบรมนี้ไว้<br>เพื่อแสดงว่า</div>
+      <div class="lname" id="pName">—</div>
+      <div class="ctitle">ได้ผ่านการฝึกอบรม หลักสูตรการกู้ชีพขั้นพื้นฐาน
+        <small>(Basic Cardiopulmonary Resuscitation: B-CPR)</small>
+      </div>
+      <div class="present" id="pIssued">ออกให้ ณ วันที่ —</div>
+      <div class="sign">
+        <div class="line"></div>
+        <div>เลขาธิการสถาบันการแพทย์ฉุกเฉินแห่งชาติ หรือผู้อำนวยการฝึกอบรม</div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="qr" id="pQr"></div>
+      <div class="ids">
+        ID: <b id="pCode">—</b><br>
+        วันหมดอายุ: <b id="pExpire">—</b><br>
+        <span style="font-size:.85em">ตรวจสอบได้ที่หน้าเว็บนี้ หรือสแกน QR</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <b>JIA TRAINER CENTER</b> — บริษัท เจี่ยรักษา จำกัด | โทร 088-558-8078 / 02-121-1669 | LINE @jiacpr
+</div>
+
+<script>
+const API = "https://tpoiyykbgsgnrdwzgzvn.supabase.co/functions/v1/bcpr-api";
+const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwb2l5eWtiZ3NnbnJkd3pnenZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NTUwMDIsImV4cCI6MjA5MDIzMTAwMn0.c7Ow_20mpmcDqDdMQ5qnsDV6-RKAO-7-eM1y-EsEXdA";
+const THMONF=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+function thDateFull(iso){ const d=new Date(iso); return `${d.getDate()} ${THMONF[d.getMonth()]} พ.ศ. ${d.getFullYear()+543}`; }
+function thDateOfficial(iso){ const d=new Date(iso); return `ออกให้ ณ วันที่ ${d.getDate()} เดือน ${THMONF[d.getMonth()]} พ.ศ. ${d.getFullYear()+543}`; }
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function verify(code){
+  const res = await fetch(API, {method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+ANON,'apikey':ANON},
+    body: JSON.stringify({action:'verify_cert', code})});
+  return res.json();
+}
+
+function normalizeCode(raw){
+  let c = raw.trim().toUpperCase();
+  // รองรับผู้ใช้กรอกปี พ.ศ. เช่น BCPR-2569-0001 → แปลงเป็น ค.ศ.
+  const m = c.match(/^BCPR-(\d{4})-(\d{4})$/);
+  if(m && Number(m[1]) > 2400) c = `BCPR-${Number(m[1])-543}-${m[2]}`;
+  return c;
+}
+
+async function doVerify(){
+  const code = normalizeCode(document.getElementById('codeInput').value);
+  if(!code) return;
+  const card = document.getElementById('resultCard');
+  card.style.display='block';
+  card.innerHTML = '<p class="muted">กำลังตรวจสอบ…</p>';
+  document.getElementById('printBar').style.display='none';
+  try{
+    const r = await verify(code);
+    if(!r.ok) throw new Error();
+    if(!r.found){
+      card.innerHTML = `<div class="badge">❌</div><div class="status-bad">ไม่พบใบรับรองเลขที่ ${esc(code)}</div>
+        <p class="muted" style="text-align:center;margin-top:6px">ตรวจสอบเลขที่อีกครั้ง หรือติดต่อ LINE @jiacpr</p>`;
+      return;
+    }
+    const c = r.cert;
+    const expired = new Date(c.expires_at) < new Date();
+    const statusHtml = c.revoked
+      ? `<div class="badge">🚫</div><div class="status-bad">ใบรับรองนี้ถูกเพิกถอน</div>`
+      : expired
+        ? `<div class="badge">⚠️</div><div class="status-bad" style="color:#B26A00">ใบรับรองหมดอายุแล้ว</div>`
+        : `<div class="badge">✅</div><div class="status-ok">ใบรับรองถูกต้อง</div>`;
+    card.innerHTML = statusHtml + `
+      <div style="margin-top:14px">
+        <div class="row"><span class="k">เลขที่</span><span class="v">${esc(c.code)}</span></div>
+        <div class="row"><span class="k">ชื่อผู้ผ่านการอบรม</span><span class="v">${esc(c.learner_name)}</span></div>
+        <div class="row"><span class="k">หลักสูตร</span><span class="v" style="max-width:60%">${esc(c.course)}</span></div>
+        <div class="row"><span class="k">วันที่ออก</span><span class="v">${thDateFull(c.issued_at)}</span></div>
+        <div class="row"><span class="k">วันหมดอายุ</span><span class="v">${thDateFull(c.expires_at)}</span></div>
+        ${c.location?`<div class="row"><span class="k">สถานที่อบรม</span><span class="v">${esc(c.location)}</span></div>`:''}
+      </div>`;
+    if(!c.revoked){
+      fillSheet(c);
+      document.getElementById('printBar').style.display='block';
+      if(new URLSearchParams(location.search).get('print')==='1'){
+        document.getElementById('certSheet').classList.add('showOnScreen');
+        setTimeout(()=>window.print(), 600);
+      }
+    }
+  }catch(e){
+    card.innerHTML = '<p class="status-bad">เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่</p>';
+  }
+}
+
+function fillSheet(c){
+  document.getElementById('pName').textContent = c.learner_name;
+  document.getElementById('pIssued').textContent = thDateOfficial(c.issued_at);
+  document.getElementById('pCode').textContent = c.code;
+  document.getElementById('pExpire').textContent = thDateFull(c.expires_at);
+  const qrEl = document.getElementById('pQr');
+  qrEl.innerHTML = '';
+  const verifyUrl = location.origin + location.pathname + '?code=' + encodeURIComponent(c.code);
+  new QRCode(qrEl, {text: verifyUrl, width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M});
+}
+
+/* init from ?code= */
+const qs = new URLSearchParams(location.search);
+if(qs.get('code')){
+  document.getElementById('codeInput').value = qs.get('code');
+  doVerify();
+}
+</script>
+</body>
+</html>
