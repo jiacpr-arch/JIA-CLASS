@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<script src="tiktok-pixel.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>จองคอร์สอบรมออนไลน์ | JIA TRAINER CENTER</title>
@@ -201,6 +202,7 @@ function renderCourses(){
 function selectCourse(key){
   selectedCourse = courses.find(c=>c.key===key) || null;
   if(!selectedCourse) return;
+  if(window.jiaTrackViewContent) jiaTrackViewContent(selectedCourse.key, selectedCourse.label, selectedCourse.price);
   document.getElementById('courseArea').innerHTML = `<div class="course-item selected">
     <div class="d"><b>${esc(selectedCourse.label)}</b><div class="meta">${Number(selectedCourse.price).toLocaleString()} บาท/ท่าน</div></div>
   </div>`;
@@ -333,8 +335,10 @@ async function submitBooking(){
       class_id: selectedClass.id, name, tel, email,
       people, note: document.getElementById('fNote').value.trim(),
       pdpa_consent: true, slip_base64: slipData.base64, slip_mime: slipData.mime,
+      ttclid: window.jiaGetTtclid ? jiaGetTtclid() : '',
     });
     if(r.ok){
+      if(window.jiaTrackInitiateCheckout) jiaTrackInitiateCheckout(selectedCourse.key, selectedCourse.label, selectedCourse.price, people);
       document.getElementById('okBookingId').textContent = r.booking_id.toUpperCase();
       document.getElementById('mainFlow').style.display = 'none';
       document.getElementById('successView').style.display = 'block';
