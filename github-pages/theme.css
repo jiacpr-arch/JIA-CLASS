@@ -442,6 +442,89 @@ button:focus-visible { outline: 3px solid #70e1e9; outline-offset: 3px; }
 }
 .corporate-box h4 { color: var(--success); }
 
+/* Course-detail pages: one calm, image-led pattern shared by every curriculum. */
+body.course-page { background: #f4f8fb; }
+.course-page.course-acls { --course-visual: url('assets/jia-class-hero.png'); }
+.course-page.course-workshop { --course-visual: url('assets/simcpr-training.png'); }
+.course-page.course-bls { --course-visual: url('assets/category-bls-community.png'); }
+.course-page.course-clinical { --course-visual: url('assets/category-clinical-skills.png'); }
+.course-page .topnav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: 58px;
+  padding: 10px max(20px, calc((100% - 1100px) / 2));
+  background: rgba(9, 30, 49, .96);
+  box-shadow: 0 5px 18px rgba(7, 24, 39, .16);
+}
+.course-page .hero {
+  min-height: 390px;
+  display: flex;
+  align-items: center;
+  padding: 82px 20px 112px;
+  text-align: left;
+  background-color: var(--navy-900);
+  background-image:
+    linear-gradient(90deg, rgba(6, 24, 42, .97) 0%, rgba(9, 40, 62, .91) 42%, rgba(9, 40, 62, .34) 100%),
+    var(--course-visual);
+  background-position: center, right center;
+  background-repeat: no-repeat;
+  background-size: cover, min(55vw, 780px) auto;
+}
+.course-page .hero::before { right: -150px; top: -160px; background: rgba(113, 223, 229, .11); }
+.course-page .hero::after { left: auto; right: 38%; bottom: -165px; background: rgba(255,255,255,.06); }
+.course-page .hero .container { width: 100%; max-width: 1100px; margin: 0 auto; }
+.course-page .hero .course-type { margin-bottom: 18px; color: #d4fbfd; }
+.course-page .hero h1 { max-width: 680px; font-size: clamp(2.05rem, 4.3vw, 4.1rem); line-height: 1.08; }
+.course-page .hero .subtitle { max-width: 600px; margin-top: 14px; font-size: clamp(1.05rem, 1.8vw, 1.32rem); }
+.course-page .hero .desc { max-width: 650px; margin: 15px 0 0; font-size: 1.02rem; }
+.course-page .hero .badges { max-width: 650px; justify-content: flex-start; margin-top: 28px; }
+.course-page > .container {
+  position: relative;
+  z-index: 3;
+  max-width: 1100px;
+  margin-top: -58px;
+  padding-bottom: 24px;
+}
+.course-page > .container > .section:first-child,
+.course-page > .container > .stats:first-child {
+  margin-top: 0;
+}
+.course-page .stats { margin-bottom: 46px; }
+.course-page .section { margin: 38px 0; }
+.course-page .section-title { padding: 15px 22px; font-size: 1.2rem; }
+.course-page .section-body { padding: 24px 26px; }
+.course-page .sub-title {
+  max-width: 760px;
+  margin: 32px 0 12px;
+  padding: 10px 16px;
+  border-radius: 0 10px 10px 0;
+}
+.course-page .highlights,
+.course-page .check-list,
+.course-page .num-list { max-width: 850px; }
+.course-page .highlights li,
+.course-page .check-list li,
+.course-page .num-list li { padding-block: 7px; }
+.course-page .pricing-box { padding: 34px 24px; }
+.course-page .cta { margin: 52px 0 30px; }
+
+@media (max-width: 760px) {
+  .course-page .topnav { padding-inline: 18px; }
+  .course-page .hero {
+    min-height: 0;
+    padding: 58px 18px 76px;
+    background-image:
+      linear-gradient(0deg, rgba(6, 24, 42, .96) 0%, rgba(9, 40, 62, .83) 58%, rgba(9, 40, 62, .46) 100%),
+      var(--course-visual);
+    background-size: cover, auto 100%;
+  }
+  .course-page .hero h1 { font-size: clamp(2rem, 10vw, 3.1rem); }
+  .course-page > .container { margin-top: -32px; }
+  .course-page .section-body { padding: 20px 16px; }
+  .course-page .section-title { padding-inline: 16px; }
+}
+
 .cta {
   background: linear-gradient(125deg, var(--navy-900), var(--teal-600));
   border-radius: 18px;
