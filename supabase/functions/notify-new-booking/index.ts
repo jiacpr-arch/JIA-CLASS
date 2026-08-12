@@ -1,7 +1,12 @@
 // notify-new-booking
 // แจ้งเตือนทีมเซลส์ทาง LINE เมื่อมีลูกค้ากดจองคลาส (booking) ใหม่เข้ามา
 // ทริกเกอร์ผ่าน trigger notify_new_booking (AFTER INSERT บน public.bookings → net.http_post)
-// ส่งหาทุกคนใน jiaroo_team ที่มี line_user_id (โครงเดียวกับ notify-new-student)
+//
+// ผู้รับ = คนใน jiaroo_team ที่ active=true และมี line_user_id (ส่วนตัว)
+//        + ทุกห้องกลุ่มใน jiaroo_notify_groups ที่ active=true (LINE OA ถูกเชิญไว้)
+//   จัดการรายชื่อกลุ่มได้ผ่าน jiaroo-line-webhook: เชิญ LINE OA เข้ากลุ่ม → บันทึกอัตโนมัติ
+//   (ดู event join/leave ใน jiaroo-line-webhook/index.ts), ดูรายการกลุ่มปัจจุบันได้ที่
+//   GET jiaroo-line-webhook?action=list-groups&key=<admin key>
 //
 // ข้อความปรับตาม channel ของการจอง:
 //   class-web / bcpr-web → จองจากเว็บ class.morroo.com พร้อมสลิป รอตรวจสอบ → ชี้ไปหน้าแอดมินของ class
@@ -38,11 +43,19 @@ async function loadToken(): Promise<string> {
   return data?.value || "";
 }
 
-// ผู้รับ = ทุกคนในทีมเซลส์ที่มี line_user_id
+// ผู้รับส่วนตัว = คนในทีมเซลส์ที่ยัง active และมี line_user_id
 async function getTeamRecipients(): Promise<string[]> {
-  const { data } = await supa.from("jiaroo_team").select("line_user_id");
+  const { data } = await supa.from("jiaroo_team").select("line_user_id").eq("active", true);
   const ids = (data || []).map((r: { line_user_id: string | null }) => r.line_user_id)
     .filter((x: string | null): x is string => !!x);
+  return [...new Set(ids)];
+}
+
+// ผู้รับกลุ่ม = ทุกห้องที่ LINE OA ถูกเชิญไว้และยังไม่ถูกเตะออก (รองรับหลายกลุ่ม)
+async function getGroupRecipients(): Promise<string[]> {
+  const { data } = await supa.from("jiaroo_notify_groups").select("group_id")
+    .eq("tenant_slug", TENANT).eq("active", true);
+  const ids = (data || []).map((r: { group_id: string }) => r.group_id);
   return [...new Set(ids)];
 }
 
@@ -139,18 +152,22 @@ Deno.serve(async (req: Request) => {
   }
 
   const text = buildText(rec);
-  const recipients = await getTeamRecipients();
+  const [individuals, groups] = await Promise.all([getTeamRecipients(), getGroupRecipients()]);
+  const recipients = [...individuals, ...groups];
 
   if (dryRun) {
-    return new Response(JSON.stringify({ ok: true, dry_run: true, recipients: recipients.length, preview: text }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({
+      ok: true, dry_run: true,
+      recipients: recipients.length, individuals: individuals.length, groups: groups.length,
+      preview: text,
+    }), { headers: { "Content-Type": "application/json" } });
   }
 
   const token = await loadToken();
   const line = await pushMany(token, recipients, text);
 
-  return new Response(JSON.stringify({ ok: true, recipients: recipients.length, line, ran_at: new Date().toISOString() }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return new Response(JSON.stringify({
+    ok: true, recipients: recipients.length, individuals: individuals.length, groups: groups.length,
+    line, ran_at: new Date().toISOString(),
+  }), { headers: { "Content-Type": "application/json" } });
 });
