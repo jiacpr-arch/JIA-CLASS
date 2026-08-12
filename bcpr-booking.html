@@ -7,12 +7,18 @@
 <meta name="description" content="จองคอร์สอบรม B-CPR การช่วยชีวิตขั้นพื้นฐานสำหรับประชาชน ออนไลน์ — เลือกรอบ ชำระเงิน แนบสลิป 600 บาท/ท่าน">
 <meta http-equiv="refresh" content="0; url=booking.html?course=B-CPR">
 <link rel="canonical" href="booking.html?course=B-CPR">
+<script src="tiktok-pixel.js"></script>
 <script>
+// สำคัญ: ต่อ ttclid (และ class_id) เข้า target ก่อน redirect เสมอ — ไม่งั้นจะเจอปัญหาเดียวกับ
+// fbclid ที่หายไปตอน redirect ของ jiacpr.com เพราะ location.replace เดิมสร้าง URL ใหม่ทิ้ง query เก่าหมด
+// (tiktok-pixel.js ด้านบนก็เก็บ ttclid ลง localStorage ไว้อีกชั้นแล้ว แต่กัน localStorage ถูกบล็อกด้วย)
 (function(){
   var params = new URLSearchParams(location.search);
   var target = 'booking.html?course=B-CPR';
   var classId = params.get('class_id');
   if(classId) target += '&class_id=' + encodeURIComponent(classId);
+  var ttclid = params.get('ttclid');
+  if(ttclid) target += '&ttclid=' + encodeURIComponent(ttclid);
   location.replace(target);
 })();
 </script>
@@ -23,9 +29,11 @@
 (function(){
   var params = new URLSearchParams(location.search);
   var classId = params.get('class_id');
-  if(classId){
-    document.getElementById('fallbackLink').href = 'booking.html?course=B-CPR&class_id=' + encodeURIComponent(classId);
-  }
+  var ttclid = params.get('ttclid');
+  var href = 'booking.html?course=B-CPR';
+  if(classId) href += '&class_id=' + encodeURIComponent(classId);
+  if(ttclid) href += '&ttclid=' + encodeURIComponent(ttclid);
+  document.getElementById('fallbackLink').href = href;
 })();
 </script>
 </body>

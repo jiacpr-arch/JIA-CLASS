@@ -104,6 +104,14 @@ const EMAIL_TO = Deno.env.get("NOTIFY_EMAIL_TO") ?? "";
 const EMAIL_FROM = Deno.env.get("NOTIFY_EMAIL_FROM") || "JIA Booking <onboarding@resend.dev>";
 const ADMIN_PAGE_URL = "https://class.morroo.com/bcpr-admin.html";
 
+// TikTok Events API (server-side conversion) — ช่องทางเสริมเหมือน LINE/email ด้านบน: ถ้าไม่ตั้ง
+// secret ไว้ก็ข้ามเงียบๆ ไม่กระทบ flow การอนุมัติ booking หลัก
+// ต้องตั้งใน Supabase Edge Function secrets: TIKTOK_PIXEL_CODE (=D5TH3UBC77U5QAK8SAJG ตัวเดียวกับ
+// tiktok-pixel.js ฝั่งเว็บ) และ TIKTOK_ACCESS_TOKEN (สร้างจาก TikTok Ads Manager > Events > Web Events
+// > Pixel นี้ > Generate Access Token)
+const TIKTOK_PIXEL_CODE = Deno.env.get("TIKTOK_PIXEL_CODE") ?? "";
+const TIKTOK_ACCESS_TOKEN = Deno.env.get("TIKTOK_ACCESS_TOKEN") ?? "";
+
 type BookingNotify = {
   source: "web" | "admin";
   bookingId: string;
@@ -161,6 +169,68 @@ function notifyNewBooking(n: BookingNotify): void {
   // deno-lint-ignore no-explicit-any
   const rt = (globalThis as any).EdgeRuntime;
   if (rt?.waitUntil) rt.waitUntil(job);
+}
+
+// เบอร์ไทยที่เก็บไว้เป็น "08x-xxx-xxxx"/"08xxxxxxxx" ฯลฯ → E.164 ก่อน hash ส่งให้ TikTok
+// (ต้องเป็น E.164 ไม่งั้น TikTok จะ match เบอร์ไม่ได้ ถึงจะ hash ถูกอัลกอริทึมก็ตาม)
+function normalizeThaiPhoneE164(tel: string): string | null {
+  const digits = tel.replace(/\D/g, "");
+  if (digits.startsWith("66") && digits.length === 11) return "+" + digits;
+  if (digits.startsWith("0") && digits.length === 10) return "+66" + digits.slice(1);
+  return null;
+}
+
+// ยิง conversion event ไปหา TikTok ตอนแอดมินอนุมัติสลิป (payment_status -> "ชำระแล้ว") เท่านั้น —
+// นี่คือจังหวะที่ใกล้เคียง "ซื้อสำเร็จ" ที่สุดของระบบนี้ เพราะไม่มี payment gateway callback แบบ
+// real-time ให้ยิงตอนลูกค้ากดจ่ายจริงบนหน้าเว็บ (ตอนนั้นมีแค่สลิปที่รอตรวจ ยังไม่ใช่เงินที่ยืนยันแล้ว)
+// event_id = booking id ให้ TikTok dedupe ได้ถ้าเผลอยิงซ้ำ (retry ฝั่งเรา)
+// อ้างอิงโครงสร้าง JSON จาก TikTok Events API v1.3 (business-api.tiktok.com/open_api/v1.3/event/track/)
+// — ก่อน deploy จริงควรยืนยัน field ล่าสุดกับ TikTok Events Manager > Test Events อีกรอบ
+async function sendTikTokCompletePayment(b: Record<string, unknown>, bookingId: string): Promise<boolean> {
+  if (!TIKTOK_PIXEL_CODE || !TIKTOK_ACCESS_TOKEN) return false;
+  try {
+    const phoneE164 = normalizeThaiPhoneE164(String(b.tel ?? ""));
+    const email = String(b.email ?? "").trim().toLowerCase();
+    // deno-lint-ignore no-explicit-any
+    const user: Record<string, any> = { external_id: [await sha256Hex(bookingId)] };
+    if (b.ttclid) user.ttclid = b.ttclid;
+    if (b.client_ip) user.ip = b.client_ip;
+    if (b.client_user_agent) user.user_agent = b.client_user_agent;
+    if (phoneE164) user.phone_number = [await sha256Hex(phoneE164)];
+    if (email) user.email = [await sha256Hex(email)];
+
+    const res = await fetch("https://business-api.tiktok.com/open_api/v1.3/event/track/", {
+      method: "POST",
+      headers: { "Access-Token": TIKTOK_ACCESS_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_source: "web",
+        event_source_id: TIKTOK_PIXEL_CODE,
+        data: [{
+          event: "CompletePayment",
+          event_time: Math.floor(Date.now() / 1000),
+          event_id: bookingId,
+          user,
+          properties: {
+            contents: [{
+              content_id: b.course_type, content_name: b.course_name,
+              content_type: "product", quantity: 1, price: Number(b.final_price ?? 0),
+            }],
+            currency: "THB",
+            value: Number(b.final_price ?? 0),
+          },
+          page: { url: "https://class.morroo.com/booking.html" },
+        }],
+      }),
+    });
+    if (!res.ok) {
+      console.error("TikTok Events API failed", res.status, await res.text().catch(() => ""));
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("TikTok Events API error", e);
+    return false;
+  }
 }
 
 async function seatsTaken(classIds: string[]): Promise<Record<string, number>> {
@@ -244,7 +314,7 @@ async function listClasses(body: Record<string, unknown>) {
   });
 }
 
-async function createBooking(body: Record<string, unknown>) {
+async function createBooking(body: Record<string, unknown>, req: Request) {
   const name = String(body.name ?? "").trim();
   const tel = String(body.tel ?? "").trim();
   const email = String(body.email ?? "").trim();
@@ -254,6 +324,9 @@ async function createBooking(body: Record<string, unknown>) {
   const pdpa = body.pdpa_consent === true;
   const slipB64 = String(body.slip_base64 ?? "");
   const slipMime = String(body.slip_mime ?? "");
+  const ttclid = String(body.ttclid ?? "").trim().slice(0, 200);
+  const clientIp = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
+  const clientUserAgent = req.headers.get("user-agent") ?? "";
 
   if (!name || name.length > 200) return json({ ok: false, error: "INVALID_NAME" }, 400);
   if (!/^[0-9+\-() ]{8,20}$/.test(tel)) return json({ ok: false, error: "INVALID_TEL" }, 400);
@@ -281,6 +354,7 @@ async function createBooking(body: Record<string, unknown>) {
   const { data, error } = await db.rpc("class_create_booking", {
     p_id: bookingId, p_class_id: classId, p_name: name, p_tel: tel, p_email: email,
     p_people: people, p_note: note, p_slip_path: slipPath,
+    p_ttclid: ttclid || null, p_client_ip: clientIp || null, p_client_user_agent: clientUserAgent || null,
   });
   if (error) {
     await db.storage.from(SLIP_BUCKET).remove([slipPath]).catch(() => {});
@@ -464,7 +538,8 @@ async function adminUpdateBooking(body: Record<string, unknown>) {
   if (patchIn.note !== undefined) patch.note = String(patchIn.note).trim();
   if (Object.keys(patch).length === 0) return json({ ok: false, error: "EMPTY_PATCH" }, 400);
   const { data, error } = await db.from("bookings").update(patch)
-    .eq("id", id).in("channel", CHANNELS).select("id");
+    .eq("id", id).in("channel", CHANNELS)
+    .select("id,channel,ttclid,client_ip,client_user_agent,tel,email,course_type,course_name,final_price,tiktok_sent_at");
   if (error) throw error;
   if (!data?.length) return json({ ok: false, error: "NOT_FOUND" }, 404);
   const action = patchIn.payment_status === "ชำระแล้ว" ? "approve_booking"
@@ -472,6 +547,14 @@ async function adminUpdateBooking(body: Record<string, unknown>) {
     : patchIn.attended !== undefined ? "mark_attended"
     : "update_booking";
   await logAudit(body.actor, action, { bookingId: id, detail: patch });
+
+  // ยิง conversion ไปหา TikTok ตอนอนุมัติสลิปครั้งแรกเท่านั้น (เฉพาะ booking ที่มาจากหน้าเว็บและมี
+  // ttclid) — เช็ค tiktok_sent_at กันยิงซ้ำถ้าแอดมินแก้ไข booking ที่อนุมัติไปแล้วอีกครั้ง
+  const b = data[0];
+  if (patchIn.payment_status === "ชำระแล้ว" && WEB_CHANNELS.includes(b.channel) && b.ttclid && !b.tiktok_sent_at) {
+    const sent = await sendTikTokCompletePayment(b, id);
+    if (sent) await db.from("bookings").update({ tiktok_sent_at: new Date().toISOString() }).eq("id", id);
+  }
   return json({ ok: true });
 }
 
@@ -636,7 +719,7 @@ Deno.serve(async (req: Request) => {
     // public
     if (action === "list_courses") return await listCourses();
     if (action === "list_classes") return await listClasses(body);
-    if (action === "create_booking") return await createBooking(body);
+    if (action === "create_booking") return await createBooking(body, req);
     if (action === "verify_cert") return await verifyCert(body);
 
     // admin
