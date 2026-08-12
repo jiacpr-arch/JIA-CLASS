@@ -3,9 +3,15 @@
 // admin (header x-admin-key): จัดการคอร์ส/รอบอบรม/การจอง/ใบเซอร์ — เฉพาะคอร์สที่ cert_prefix ไม่เป็น null
 //   (courses.cert_prefix is not null = คอร์สที่อยู่ในระบบจองนี้; แถว joincourse/privateclass
 //    ของ cpr.morroo.com มี cert_prefix เป็น null เสมอ จึงไม่ถูกดึง/แก้ไขโดยฟังก์ชันนี้เลย)
-// แจ้งเตือนการจองใหม่ผ่าน LINE OA / อีเมล — ดู docs/NOTIFICATIONS.md และ block "notifications" ด้านล่าง
+// แจ้งเตือนการจองใหม่: ทีมงานได้รับผ่าน LINE อยู่แล้วจาก trigger notify_new_booking บนตาราง bookings
+//   (ยิงเข้า edge function notify-new-booking ทุก insert) — block "notifications" ด้านล่างเป็นช่องทาง
+//   "เสริม" ที่ปิดอยู่โดย default อย่าเปิดถ้าไม่อยากได้ข้อความซ้ำ ดู docs/NOTIFICATIONS.md
 // รหัสแอดมินเป็นของระบบนี้โดยเฉพาะ (แยกจาก ADMIN_API_KEY เดิมของ cpr.morroo.com/admin)
 // เก็บเป็น SHA-256 hash ในตาราง bcpr_admin_auth (RLS ปิดสนิท เข้าถึงได้เฉพาะ service role)
+//
+// Log ตรวจสอบย้อนหลัง: admin key ยังใช้ร่วมกันเหมือนเดิม (ไม่ได้แยก login ต่อคน) แต่ทุก action
+// ที่แก้ข้อมูลรับ body.actor (ชื่อผู้ใช้งานที่พิมพ์ตอนล็อกอินในหน้าเว็บ) แล้วบันทึกลง bcpr_audit_log
+// ไว้เพื่อตรวจสอบว่าใครทำอะไรเมื่อไหร่ — ดูได้ที่ action admin_list_audit_log
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -66,10 +72,31 @@ function certExpiry(issuedAt: string): string {
   return d.toISOString();
 }
 
-// ---------- notifications (แจ้งทีมงานเมื่อมีการจองใหม่ — ทุกคอร์สที่ระบบนี้จัดการ) ----------
-// ตั้งค่า secrets ใน Supabase (ตั้งอย่างน้อย 1 ช่องทาง ไม่ตั้งเลย = ไม่แจ้งเตือน):
-//   LINE_CHANNEL_ACCESS_TOKEN + LINE_NOTIFY_TO  → แจ้งผ่าน LINE OA (push ไปยัง userId/groupId ของทีมงาน)
-//   RESEND_API_KEY + NOTIFY_EMAIL_TO            → แจ้งผ่านอีเมล (Resend), NOTIFY_EMAIL_FROM (ไม่บังคับ)
+// บันทึก log ตรวจสอบย้อนหลัง — await เสมอ (ไม่ fire-and-forget) เพื่อให้มั่นใจว่าบันทึกสำเร็จก่อนตอบกลับ
+// ถ้าบันทึก log ไม่สำเร็จ ไม่ทำให้ action หลักล้ม (log เป็นของเสริม ไม่ใช่ path หลัก)
+async function logAudit(actor: unknown, action: string, extra: {
+  bookingId?: string; classId?: string; certCode?: string; detail?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    await db.from("bcpr_audit_log").insert({
+      actor: String(actor ?? "").trim().slice(0, 100) || null,
+      action,
+      booking_id: extra.bookingId ?? null,
+      class_id: extra.classId ?? null,
+      cert_code: extra.certCode ?? null,
+      detail: extra.detail ?? null,
+    });
+  } catch (e) {
+    console.error("audit log failed", action, e);
+  }
+}
+
+// ---------- notifications (ช่องทางเสริม — ปิดอยู่โดย default) ----------
+// ทีมงานได้รับแจ้งเตือน LINE จาก trigger notify_new_booking อยู่แล้วทุกการจอง
+// block นี้จะทำงานก็ต่อเมื่อตั้ง secrets ด้านล่าง ซึ่งจะทำให้ได้ข้อความ "ซ้ำ" กับของ trigger
+// ใช้เฉพาะกรณีอยากได้อีเมลเพิ่ม หรืออยากส่งเข้าห้อง LINE อื่นที่ไม่ใช่ jiaroo_team:
+//   LINE_CHANNEL_ACCESS_TOKEN + LINE_NOTIFY_TO  → push เข้า userId/groupId ที่ระบุ
+//   RESEND_API_KEY + NOTIFY_EMAIL_TO            → อีเมลผ่าน Resend, NOTIFY_EMAIL_FROM (ไม่บังคับ)
 const LINE_TOKEN = Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN") ?? "";
 const LINE_TO = Deno.env.get("LINE_NOTIFY_TO") ?? "";
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
@@ -367,6 +394,7 @@ async function adminCreateClass(body: Record<string, unknown>) {
   };
   const { error } = await db.from("classes").insert(row);
   if (error) throw error;
+  await logAudit(body.actor, "create_class", { classId: row.id, detail: { date, time_slot: timeSlot, max_students: maxStudents, course_key: course.key } });
   return json({ ok: true, class: row });
 }
 
@@ -398,12 +426,13 @@ async function adminUpdateClass(body: Record<string, unknown>) {
     .eq("id", id).in("course_key", keys).select("id");
   if (error) throw error;
   if (!data?.length) return json({ ok: false, error: "NOT_FOUND" }, 404);
+  await logAudit(body.actor, "update_class", { classId: id, detail: patch });
   return json({ ok: true });
 }
 
 async function adminListBookings(body: Record<string, unknown>) {
   let q = db.from("bookings")
-    .select("id,name,tel,email,class_id,channel,course_type,course_name,total_people,final_price,payment_mode,payment_slip,payment_status,start_date,time_slot,note,attended_at,created_at")
+    .select("id,name,tel,email,class_id,channel,course_type,course_name,total_people,final_price,payment_mode,payment_slip,payment_status,start_date,time_slot,note,attended_at,created_at,sales_staff")
     .in("channel", CHANNELS).order("created_at", { ascending: false }).limit(500);
   if (body.class_id) q = q.eq("class_id", String(body.class_id));
   if (body.course_key) q = q.eq("course_type", String(body.course_key));
@@ -438,11 +467,17 @@ async function adminUpdateBooking(body: Record<string, unknown>) {
     .eq("id", id).in("channel", CHANNELS).select("id");
   if (error) throw error;
   if (!data?.length) return json({ ok: false, error: "NOT_FOUND" }, 404);
+  const action = patchIn.payment_status === "ชำระแล้ว" ? "approve_booking"
+    : patchIn.payment_status === "ยกเลิก" ? "reject_booking"
+    : patchIn.attended !== undefined ? "mark_attended"
+    : "update_booking";
+  await logAudit(body.actor, action, { bookingId: id, detail: patch });
   return json({ ok: true });
 }
 
 // ลงจองแทนลูกค้า (จองผ่านเซลล์/โทร/หน้างาน) — ไม่บังคับสลิป กำหนดราคา/สถานะ/ช่องทางชำระได้
 // ดึงคอร์ส/ราคาจาก class เอง (join classes→courses) แทนที่จะ hardcode คอร์สเดียวเหมือนของเดิม
+// บันทึกชื่อผู้ลงจอง (actor) ไว้ในคอลัมน์ sales_staff เพื่อรู้ว่าลูกค้ารายนี้เป็นของเซลล์คนไหน
 async function adminCreateBooking(body: Record<string, unknown>) {
   const name = String(body.name ?? "").trim();
   const tel = String(body.tel ?? "").trim();
@@ -454,6 +489,7 @@ async function adminCreateBooking(body: Record<string, unknown>) {
   const paymentStatus = String(body.payment_status ?? "");
   const priceRaw = body.final_price;
   const finalPrice = priceRaw === undefined || priceRaw === null || priceRaw === "" ? null : Number(priceRaw);
+  const actor = String(body.actor ?? "").trim().slice(0, 100);
 
   if (!name || name.length > 200) return json({ ok: false, error: "INVALID_NAME" }, 400);
   if (!/^[0-9+\-() ]{8,20}$/.test(tel)) return json({ ok: false, error: "INVALID_TEL" }, 400);
@@ -470,9 +506,14 @@ async function adminCreateBooking(body: Record<string, unknown>) {
     p_id: bookingId, p_class_id: classId, p_name: name, p_tel: tel, p_email: email,
     p_people: people, p_note: note,
     p_final_price: finalPrice, p_payment_mode: paymentMode, p_payment_status: paymentStatus,
+    p_sales_staff: actor || null,
   });
   if (error) return json({ ok: false, error: "BOOKING_FAILED" }, 500);
   if (!data?.ok) return json({ ok: false, error: data?.error ?? "BOOKING_FAILED", seats_left: data?.seats_left }, 409);
+
+  await logAudit(actor, "create_booking", {
+    bookingId, classId, detail: { name, tel, people, total: data.total, payment_status: paymentStatus },
+  });
 
   notifyNewBooking({
     source: "admin", bookingId, courseName: data.course_name ?? data.course_key ?? "คอร์สอบรม",
@@ -533,6 +574,9 @@ async function adminIssueCert(body: Record<string, unknown>) {
     }
     if (!inserted) return json({ ok: false, error: "CODE_CONFLICT" }, 500);
   }
+  for (const c of issued) {
+    await logAudit(body.actor, "issue_cert", { bookingId, certCode: c.code, detail: { name: c.name } });
+  }
   return json({ ok: true, certificates: issued });
 }
 
@@ -545,6 +589,7 @@ async function adminRevokeCert(body: Record<string, unknown>) {
     .eq("code", code).in("kind", keys).select("code");
   if (error) throw error;
   if (!data?.length) return json({ ok: false, error: "NOT_FOUND" }, 404);
+  await logAudit(body.actor, "revoke_cert", { certCode: code });
   return json({ ok: true });
 }
 
@@ -560,6 +605,17 @@ async function adminListCerts(body: Record<string, unknown>) {
     ok: true,
     certificates: (data ?? []).map((c) => ({ ...c, expires_at: certExpiry(c.issued_at) })),
   });
+}
+
+async function adminListAuditLog(body: Record<string, unknown>) {
+  let q = db.from("bcpr_audit_log")
+    .select("id,created_at,actor,action,booking_id,class_id,cert_code,detail")
+    .order("created_at", { ascending: false }).limit(500);
+  if (body.booking_id) q = q.eq("booking_id", String(body.booking_id));
+  if (body.action) q = q.eq("action", String(body.action));
+  const { data, error } = await q;
+  if (error) throw error;
+  return json({ ok: true, entries: data ?? [] });
 }
 
 // ---------- router ----------
@@ -601,6 +657,7 @@ Deno.serve(async (req: Request) => {
         case "admin_issue_cert": return await adminIssueCert(body);
         case "admin_revoke_cert": return await adminRevokeCert(body);
         case "admin_list_certs": return await adminListCerts(body);
+        case "admin_list_audit_log": return await adminListAuditLog(body);
       }
     }
     return json({ ok: false, error: "UNKNOWN_ACTION" }, 400);
