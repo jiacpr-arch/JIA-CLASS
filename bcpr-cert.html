@@ -44,7 +44,9 @@ a{color:var(--navy)}
   padding:70px 80px;text-align:center;font-family:'Sarabun',sans-serif;color:var(--ink);
   display:flex;flex-direction:column;justify-content:space-between;
 }
-.sheet .seal{width:60px;height:60px;border-radius:50%;background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85em;margin:0 auto 8px;border:2px solid var(--gold)}
+.sheet .seal{width:105px;height:105px;border-radius:50%;background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.3em;margin:0 auto 12px;border:2px solid var(--gold);overflow:hidden}
+.sheet .seal.has-img{background:#fff}
+.sheet .seal img{width:100%;height:100%;object-fit:contain;display:none}
 .sheet .org{font-size:1.15em;font-weight:700;color:var(--navy)}
 .sheet .org small{display:block;font-weight:400;color:#5B6B90;font-size:.75em}
 .sheet .present{font-size:1em;color:#5B6B90;margin-top:10px;line-height:1.5}
@@ -97,7 +99,7 @@ a{color:var(--navy)}
 <div id="certSheet">
   <div class="sheet">
     <div>
-      <div class="seal" id="pSeal">สพฉ.</div>
+      <div class="seal" id="pSeal"><img id="pSealImg" src="niems-seal.png" alt="ตราสถาบันการแพทย์ฉุกเฉินแห่งชาติ (สพฉ.)"><span id="pSealText">JIA</span></div>
       <div class="org" id="pOrg">บริษัท เจี่ยรักษา จำกัด — JIA TRAINER CENTER
         <small id="pOrgSmall">ศูนย์การเรียนรู้ชุมชนที่ได้รับการรับรองจากสถาบันการแพทย์ฉุกเฉินแห่งชาติ (สพฉ.) เลขที่ศูนย์ LC210002</small>
       </div>
@@ -203,7 +205,9 @@ function fillSheet(c){
   // ตรา สพฉ./เลขที่ศูนย์ LC210002/ลายเซ็นเลขาธิการ สพฉ. ใช้ได้เฉพาะหลักสูตร B-CPR เท่านั้น
   // (เป็นข้อเท็จจริงตามประกาศ สพฉ. เฉพาะคอร์สนี้) คอร์สอื่นแสดงตราบริษัท+ลายเซ็นผู้อำนวยการฝึกอบรมแทน
   const isNiems = c.kind === 'B-CPR';
-  document.getElementById('pSeal').textContent = isNiems ? 'สพฉ.' : 'JIA';
+  document.getElementById('pSeal').classList.toggle('has-img', isNiems);
+  document.getElementById('pSealImg').style.display = isNiems ? 'block' : 'none';
+  document.getElementById('pSealText').style.display = isNiems ? 'none' : 'block';
   document.getElementById('pOrgSmall').textContent = isNiems
     ? 'ศูนย์การเรียนรู้ชุมชนที่ได้รับการรับรองจากสถาบันการแพทย์ฉุกเฉินแห่งชาติ (สพฉ.) เลขที่ศูนย์ LC210002'
     : 'ศูนย์ฝึกอบรมบริษัท เจี่ยรักษา จำกัด';
