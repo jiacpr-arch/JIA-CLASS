@@ -25,6 +25,11 @@
 //   จะตรวจสลิปภายใน 24 ชม. และรายการที่ค้างยังกินที่นั่งของรอบอยู่ด้วย
 //   ตั้งเวลาไว้ 08:30 และ 17:30 เวลาไทย (cron job: notify-pending-slips-am / -pm)
 //
+//   POST ?job=class-reminder → รายงานรอบเรียนที่จะเริ่มในอีก CLASS_REMINDER_DAYS_AHEAD วัน
+//   พร้อมรายชื่อ+เบอร์โทรนักเรียนที่จองไว้ (สถานะ รอตรวจสอบ/ชำระแล้ว) ให้ทีมงานตามลูกค้าเอง
+//   ก่อนถึงวันเรียน — ถ้าวันนั้นไม่มีรอบเรียน หรือมีแต่ยังไม่มีคนจองเลย จะไม่ส่งอะไร ไม่กินโควตา
+//   ตั้งเวลาไว้ 08:00 เวลาไทย (cron job: notify-class-reminder)
+//
 // Secrets ที่ใช้ (ตั้งผ่าน Supabase, ใช้ร่วมกับฟังก์ชันอื่นในโปรเจกต์):
 //   LINE_CHANNEL_ACCESS_TOKEN  (มีอยู่แล้ว — fallback อ่านจากตาราง jiaroo_secrets)
 //   NOTIFY_WEBHOOK_SECRET      กันยิง endpoint มั่ว — ตรวจกับ header x-webhook-secret
@@ -49,6 +54,7 @@ const HOLD_STATUSES = ["รอตรวจสอบ", "ชำระแล้ว"
 const NEAR_FULL_THRESHOLD = 3; // เหลือ ≤ เท่านี้ = แทรกคำเตือนใกล้เต็ม
 const STALE_HOURS = 12; // สลิปค้างตรวจนานเกินเท่านี้ = เข้ารายการเตือน
 const STALE_LIST_MAX = 10; // แสดงในข้อความสูงสุดกี่รายการ (ที่เหลือสรุปเป็นตัวเลข)
+const CLASS_REMINDER_DAYS_AHEAD = 3; // รายงานรอบเรียนที่จะเริ่มในอีกกี่วัน
 
 // อ่าน LINE token แบบเดียวกับ notify-new-student (env ก่อน แล้วค่อย fallback ตาราง secrets)
 async function loadToken(): Promise<string> {
@@ -214,6 +220,71 @@ async function runPendingSlipsJob(dryRun: boolean): Promise<Response> {
   });
 }
 
+// งานตั้งเวลา: รายงานรอบเรียนที่จะเริ่มในอีก CLASS_REMINDER_DAYS_AHEAD วัน พร้อมรายชื่อ+เบอร์นักเรียน
+// ให้ทีมงานตามลูกค้าเอง — รอบที่ยังไม่มีคนจองเลยจะไม่ถูกรวมในรายงาน (ไม่มีอะไรให้ตาม)
+async function runClassReminderJob(dryRun: boolean): Promise<Response> {
+  const target = new Date(Date.now() + CLASS_REMINDER_DAYS_AHEAD * 86400000).toISOString().slice(0, 10);
+
+  // เฉพาะคอร์สของระบบ class.morroo.com (cert_prefix is not null) กันชนกับ cpr.morroo.com
+  const { data: courses } = await supa.from("courses").select("key,label").not("cert_prefix", "is", null);
+  const courseLabel = new Map((courses || []).map((c: { key: string; label: string }) => [c.key, c.label]));
+  const courseKeys = [...courseLabel.keys()];
+  if (courseKeys.length === 0) {
+    return new Response(JSON.stringify({ ok: true, job: "class-reminder", date: target, classes: 0, sent: 0 }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const { data: classes, error } = await supa.from("classes")
+    .select("id,course_key,date,time_slot")
+    .in("course_key", courseKeys).eq("date", target).eq("status", "ready")
+    .order("time_slot", { ascending: true });
+  if (error) {
+    return new Response(JSON.stringify({ ok: false, error: String(error.message) }), {
+      status: 500, headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const blocks: string[] = [];
+  let totalStudents = 0;
+  for (const cls of classes || []) {
+    const { data: bks } = await supa.from("bookings")
+      .select("name,tel,total_people,payment_status")
+      .eq("class_id", cls.id).in("payment_status", HOLD_STATUSES)
+      .order("created_at", { ascending: true });
+    const rows = bks || [];
+    if (rows.length === 0) continue; // ยังไม่มีคนจอง — ไม่มีอะไรให้ตาม ข้ามไป
+    const people = rows.reduce((sum: number, b: { total_people: number | null }) => sum + (b.total_people || 0), 0);
+    totalStudents += people;
+    const lines = rows.map((b: { name: string; tel: string | null; total_people: number | null; payment_status: string }, i: number) =>
+      `${i + 1}. ${b.name} - ${b.tel || "-"} (${b.total_people ?? "-"} คน)${b.payment_status === "รอตรวจสอบ" ? " [รอตรวจสอบ]" : ""}`
+    );
+    blocks.push(`📚 ${courseLabel.get(cls.course_key) || cls.course_key} ${cls.time_slot || ""}\n` +
+      `ผู้เรียน ${people} คน (${rows.length} รายการจอง):\n` + lines.join("\n"));
+  }
+
+  if (blocks.length === 0) {
+    return new Response(JSON.stringify({ ok: true, job: "class-reminder", date: target, classes: (classes || []).length, sent: 0 }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const text = `📅 เตือนล่วงหน้า ${CLASS_REMINDER_DAYS_AHEAD} วันก่อนเรียน (${thDate(target)}) — ${blocks.length} รอบ รวม ${totalStudents} คน\n\n` +
+    blocks.join("\n\n");
+
+  const { recipients, mode } = await getRecipients();
+  if (dryRun) {
+    return new Response(JSON.stringify({ ok: true, dry_run: true, job: "class-reminder", date: target, classes: blocks.length, mode, recipients: recipients.length, preview: text }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const token = await loadToken();
+  const line = await pushMany(token, recipients, text);
+  return new Response(JSON.stringify({ ok: true, job: "class-reminder", date: target, classes: blocks.length, mode, recipients: recipients.length, line, ran_at: new Date().toISOString() }), {
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
 
@@ -233,6 +304,7 @@ Deno.serve(async (req: Request) => {
 
   // โหมดงานตั้งเวลา (pg_cron) — แยกจาก flow แจ้งเตือนจองใหม่
   if (url.searchParams.get("job") === "pending-slips") return await runPendingSlipsJob(dryRun);
+  if (url.searchParams.get("job") === "class-reminder") return await runClassReminderJob(dryRun);
 
   // รองรับทั้ง payload ของ Database Webhook ({ type, table, record }) และเรียกทดสอบตรงๆ
   const rec = payload?.record || payload || {};
