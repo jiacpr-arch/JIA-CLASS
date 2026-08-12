@@ -40,6 +40,7 @@ th{background:var(--navy);color:#fff;padding:9px 10px;text-align:left;font-weigh
 td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:hover td{background:#FBFCFE}
 .chip{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.8em;font-weight:700;white-space:nowrap}
+.chip.ref{background:#EEF1FB;border:1px solid var(--line);color:var(--navy);border-radius:5px;font-size:.92em}
 .chip.ready{background:#E5F2E6;color:var(--ok)}
 .chip.wait{background:#FFF3DF;color:var(--warn)}
 .chip.paid{background:#E5F2E6;color:var(--ok)}
@@ -82,6 +83,7 @@ tr:hover td{background:#FBFCFE}
     <button id="tab-classes" class="active" onclick="showTab('classes')">📅 รอบอบรม</button>
     <button id="tab-bookings" onclick="showTab('bookings')">🎟️ การจอง</button>
     <button id="tab-certs" onclick="showTab('certs')">📜 ใบเซอร์</button>
+    <button id="tab-help" onclick="showTab('help')">📖 วิธีใช้งาน</button>
   </div>
 
   <!-- classes -->
@@ -131,6 +133,29 @@ tr:hover td{background:#FBFCFE}
       <div style="overflow-x:auto"><table id="tblCerts"><thead><tr>
         <th>เลขที่</th><th>ชื่อผู้ผ่านอบรม</th><th>วันออก</th><th>หมดอายุ</th><th>สถานะ</th><th>จัดการ</th>
       </tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- help -->
+  <div id="view-help" style="display:none">
+    <div class="card">
+      <h3>ขั้นตอนการทำงานประจำวัน</h3>
+      <ol style="margin:10px 0 0 20px;line-height:1.9">
+        <li><b>เปิดรอบอบรม</b> — แท็บ 📅 รอบอบรม → กรอกวันที่/เวลา/จำนวนรับ → กด <span class="chip ref">+ เปิดรอบนี้</span> ลูกค้าจะเห็นและจองได้ทันที</li>
+        <li><b>ตรวจสลิปและอนุมัติ</b> — แท็บ 🎟️ การจอง → กรองสถานะ <span class="chip ref">รอตรวจสอบ</span> → กด <span class="chip ref">ดูสลิป</span> เทียบยอดให้ตรง (600 บาท × จำนวนคน) → กด <span class="chip ref">อนุมัติ</span> หรือ <span class="chip ref">ปฏิเสธ</span></li>
+        <li><b>เช็คชื่อวันอบรม</b> — แท็บ 🎟️ การจอง → กด <span class="chip ref">เช็คชื่อ</span> ให้รายการที่ลูกค้ามาเข้าเรียนจริง</li>
+        <li><b>ออกใบเซอร์</b> — ออกได้เฉพาะรายการที่ <span class="chip ref">ชำระแล้ว</span> → กด <span class="chip ref">ออกใบเซอร์</span> → พิมพ์ชื่อผู้ผ่านอบรม 1 คน/บรรทัด (ใบเซอร์มีอายุ 2 ปีอัตโนมัติ)</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>คำถามที่พบบ่อย</h3>
+      <p style="margin-top:8px"><b>หน้าจองของลูกค้าว่างเปล่า</b> — ยังไม่ได้เปิดรอบอบรมเลย ไปแท็บ 📅 รอบอบรม แล้วเปิดรอบใหม่</p>
+      <p style="margin-top:10px"><b>ลูกค้าโอนเงินผิดยอด</b> — อย่าเพิ่งกดอนุมัติ ทักไปสอบถามลูกค้าทาง LINE @jiacpr ก่อนเสมอ</p>
+      <p style="margin-top:10px"><b>กดออกใบเซอร์ไม่ได้</b> — ต้องเป็นรายการที่สถานะ <span class="chip ref">ชำระแล้ว</span> เท่านั้น</p>
+    </div>
+    <div class="card">
+      <h3>คู่มือฉบับเต็ม (PDF)</h3>
+      <p class="muted">คู่มือฉบับพิมพ์ (มีรหัสผ่านแอดมินอยู่ในเล่ม) ถูกส่งให้เจ้าของระบบโดยตรงแล้วนอกช่องทางนี้ เพื่อความปลอดภัยจึงไม่ได้แนบไฟล์ไว้ในหน้าเว็บ — หากต้องการไฟล์อีกครั้งหรือรหัสผ่านใหม่ ติดต่อผู้ดูแลระบบ (โทร 088-558-8078 / LINE @jiacpr)</p>
     </div>
   </div>
 </div>
@@ -206,7 +231,7 @@ function enterApp(){
   loadClasses(); loadBookings(); loadCerts();
 }
 function showTab(name){
-  for(const t of ['classes','bookings','certs']){
+  for(const t of ['classes','bookings','certs','help']){
     document.getElementById('view-'+t).style.display = t===name?'block':'none';
     document.getElementById('tab-'+t).classList.toggle('active', t===name);
   }
