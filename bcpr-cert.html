@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ตรวจสอบใบรับรอง B-CPR | JIA TRAINER CENTER</title>
-<meta name="description" content="ตรวจสอบใบรับรองผู้ผ่านการฝึกอบรมหลักสูตรการกู้ชีพขั้นพื้นฐาน (B-CPR)">
+<title>ตรวจสอบใบรับรอง | JIA TRAINER CENTER</title>
+<meta name="description" content="ตรวจสอบใบรับรองผู้ผ่านการฝึกอบรมหลักสูตรต่างๆ ของ JIA TRAINER CENTER">
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
@@ -73,15 +73,15 @@ a{color:var(--navy)}
 <body>
 
 <div class="hero">
-  <h1>ตรวจสอบใบรับรอง B-CPR</h1>
-  <p style="opacity:.8;font-size:.9em">หลักสูตรการกู้ชีพขั้นพื้นฐาน (Basic Cardiopulmonary Resuscitation)</p>
+  <h1>ตรวจสอบใบรับรอง</h1>
+  <p style="opacity:.8;font-size:.9em">ตรวจสอบใบรับรองผู้ผ่านการฝึกอบรมทุกหลักสูตรของ JIA TRAINER CENTER</p>
 </div>
 
 <div class="container">
   <div class="card" id="searchCard">
     <b>กรอกเลขที่ใบรับรอง</b>
     <div class="searchbox">
-      <input id="codeInput" placeholder="BCPR-2569-0001 หรือ BCPR-2026-0001" onkeydown="if(event.key==='Enter')doVerify()">
+      <input id="codeInput" placeholder="เช่น BCPR-2569-0001 หรือ ACLS-2026-0001" onkeydown="if(event.key==='Enter')doVerify()">
       <button class="btn" onclick="doVerify()">ตรวจสอบ</button>
     </div>
     <p class="muted" style="margin-top:6px">เลขที่ใบรับรองอยู่บนใบเซอร์ หรือสแกน QR บนใบเซอร์เพื่อเปิดหน้านี้อัตโนมัติ</p>
@@ -97,19 +97,19 @@ a{color:var(--navy)}
 <div id="certSheet">
   <div class="sheet">
     <div>
-      <div class="seal">สพฉ.</div>
-      <div class="org">บริษัท เจี่ยรักษา จำกัด — JIA TRAINER CENTER
-        <small>ศูนย์การเรียนรู้ชุมชนที่ได้รับการรับรองจากสถาบันการแพทย์ฉุกเฉินแห่งชาติ (สพฉ.) เลขที่ศูนย์ LC210002</small>
+      <div class="seal" id="pSeal">สพฉ.</div>
+      <div class="org" id="pOrg">บริษัท เจี่ยรักษา จำกัด — JIA TRAINER CENTER
+        <small id="pOrgSmall">ศูนย์การเรียนรู้ชุมชนที่ได้รับการรับรองจากสถาบันการแพทย์ฉุกเฉินแห่งชาติ (สพฉ.) เลขที่ศูนย์ LC210002</small>
       </div>
       <div class="present">ขอมอบใบรับรองผลการฝึกอบรมนี้ไว้<br>เพื่อแสดงว่า</div>
       <div class="lname" id="pName">—</div>
-      <div class="ctitle">ได้ผ่านการฝึกอบรม หลักสูตรการกู้ชีพขั้นพื้นฐาน
+      <div class="ctitle" id="pCtitle">ได้ผ่านการฝึกอบรม หลักสูตรการกู้ชีพขั้นพื้นฐาน
         <small>(Basic Cardiopulmonary Resuscitation: B-CPR)</small>
       </div>
       <div class="present" id="pIssued">ออกให้ ณ วันที่ —</div>
       <div class="sign">
         <div class="line"></div>
-        <div>เลขาธิการสถาบันการแพทย์ฉุกเฉินแห่งชาติ หรือผู้อำนวยการฝึกอบรม</div>
+        <div id="pSignTitle">เลขาธิการสถาบันการแพทย์ฉุกเฉินแห่งชาติ หรือผู้อำนวยการฝึกอบรม</div>
       </div>
     </div>
     <div class="meta">
@@ -144,9 +144,9 @@ async function verify(code){
 
 function normalizeCode(raw){
   let c = raw.trim().toUpperCase();
-  // รองรับผู้ใช้กรอกปี พ.ศ. เช่น BCPR-2569-0001 → แปลงเป็น ค.ศ.
-  const m = c.match(/^BCPR-(\d{4})-(\d{4})$/);
-  if(m && Number(m[1]) > 2400) c = `BCPR-${Number(m[1])-543}-${m[2]}`;
+  // รองรับผู้ใช้กรอกปี พ.ศ. เช่น ACLS-2569-0001 → แปลงเป็น ค.ศ. (ใช้ได้กับทุกคอร์ส ไม่ใช่แค่ B-CPR)
+  const m = c.match(/^([A-Z]{4})-(\d{4})-(\d{4})$/);
+  if(m && Number(m[2]) > 2400) c = `${m[1]}-${Number(m[2])-543}-${m[3]}`;
   return c;
 }
 
@@ -199,6 +199,21 @@ function fillSheet(c){
   document.getElementById('pIssued').textContent = thDateOfficial(c.issued_at);
   document.getElementById('pCode').textContent = c.code;
   document.getElementById('pExpire').textContent = thDateFull(c.expires_at);
+
+  // ตรา สพฉ./เลขที่ศูนย์ LC210002/ลายเซ็นเลขาธิการ สพฉ. ใช้ได้เฉพาะหลักสูตร B-CPR เท่านั้น
+  // (เป็นข้อเท็จจริงตามประกาศ สพฉ. เฉพาะคอร์สนี้) คอร์สอื่นแสดงตราบริษัท+ลายเซ็นผู้อำนวยการฝึกอบรมแทน
+  const isNiems = c.kind === 'B-CPR';
+  document.getElementById('pSeal').textContent = isNiems ? 'สพฉ.' : 'JIA';
+  document.getElementById('pOrgSmall').textContent = isNiems
+    ? 'ศูนย์การเรียนรู้ชุมชนที่ได้รับการรับรองจากสถาบันการแพทย์ฉุกเฉินแห่งชาติ (สพฉ.) เลขที่ศูนย์ LC210002'
+    : 'ศูนย์ฝึกอบรมบริษัท เจี่ยรักษา จำกัด';
+  document.getElementById('pCtitle').innerHTML = isNiems
+    ? 'ได้ผ่านการฝึกอบรม หลักสูตรการกู้ชีพขั้นพื้นฐาน<small>(Basic Cardiopulmonary Resuscitation: B-CPR)</small>'
+    : `ได้ผ่านการฝึกอบรม หลักสูตร ${esc(c.course)}`;
+  document.getElementById('pSignTitle').textContent = isNiems
+    ? 'เลขาธิการสถาบันการแพทย์ฉุกเฉินแห่งชาติ หรือผู้อำนวยการฝึกอบรม'
+    : 'ผู้อำนวยการฝึกอบรม';
+
   const qrEl = document.getElementById('pQr');
   qrEl.innerHTML = '';
   const verifyUrl = location.origin + location.pathname + '?code=' + encodeURIComponent(c.code);
