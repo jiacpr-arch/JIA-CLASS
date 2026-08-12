@@ -12,6 +12,14 @@
   --canvas: #f4f8fb;
   --accent: #c84652;
   --success: #287a5b;
+  --audience-public: #087f8c;
+  --audience-organization: #5b4bb7;
+  --audience-medical: #b96512;
+  --level-starter: #237c61;
+  --level-foundation: #1976a4;
+  --level-continuing: #5356a8;
+  --level-specialist: #9a5570;
+  --level-advanced: #c84652;
   --shadow: 0 16px 42px rgba(16, 42, 67, .10);
 }
 
@@ -206,7 +214,8 @@ body.home-page .hero .desc {
   letter-spacing: -.035em;
   margin-top: 10px;
 }
-.course-filter { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.course-directory-copy { flex: 1 1 360px; }
+.course-filter { display: flex; flex: 0 1 430px; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .filter-button {
   appearance: none;
   border: 1px solid #cbd9e3;
@@ -223,6 +232,64 @@ body.home-page .hero .desc {
 .filter-button:hover { border-color: var(--teal-500); transform: translateY(-1px); }
 .filter-button.is-active { border-color: var(--navy-900); background: var(--navy-900); color: #fff; }
 .filter-button.is-active span { color: #a8e7eb; }
+
+.course-legend {
+  flex: 0 0 100%;
+  order: 3;
+  display: grid;
+  gap: 9px;
+  grid-column: 1 / -1;
+  width: 100%;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255,255,255,.72);
+}
+.legend-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.legend-title {
+  min-width: 84px;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 700;
+}
+.legend-chip,
+.course-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: .74rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+.legend-chip { padding: 6px 8px; background: #fff; }
+.course-chip { padding: 6px 8px; background: rgba(255,255,255,.10); }
+
+.audience-public { color: var(--audience-public); }
+.audience-organization { color: var(--audience-organization); }
+.audience-medical { color: var(--audience-medical); }
+.difficulty-starter { color: var(--level-starter); }
+.difficulty-foundation { color: var(--level-foundation); }
+.difficulty-continuing { color: var(--level-continuing); }
+.difficulty-specialist { color: var(--level-specialist); }
+.difficulty-advanced { color: var(--level-advanced); }
+
+.course-card .course-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 17px;
+}
+.course-card .course-chip.audience-public { color: #9ee8df; background: rgba(16,157,145,.16); }
+.course-card .course-chip.audience-organization { color: #d4caff; background: rgba(128,110,221,.18); }
+.course-card .course-chip.audience-medical { color: #ffd29c; background: rgba(235,155,66,.15); }
+.course-card .course-chip.difficulty-starter { color: #b8f1d5; }
+.course-card .course-chip.difficulty-foundation { color: #b9e5ff; }
+.course-card .course-chip.difficulty-continuing { color: #d3d5ff; }
+.course-card .course-chip.difficulty-specialist { color: #ffc5d9; }
+.course-card .course-chip.difficulty-advanced { color: #ffd0d4; }
 
 .experience {
   display: grid;
@@ -423,6 +490,11 @@ button:focus-visible { outline: 3px solid #70e1e9; outline-offset: 3px; }
 }
 .course-card:nth-of-type(3n+2) .card-header { background: linear-gradient(125deg, #123853, #087f8c); }
 .course-card:nth-of-type(3n) .card-header { background: linear-gradient(125deg, #182f4b, #315b75); }
+.course-card.difficulty-starter .card-header { background: linear-gradient(125deg, #0b5c59, #149c88); }
+.course-card.difficulty-foundation .card-header { background: linear-gradient(125deg, #123d60, #1976a4); }
+.course-card.difficulty-continuing .card-header { background: linear-gradient(125deg, #323b78, #6062b6); }
+.course-card.difficulty-specialist .card-header { background: linear-gradient(125deg, #633b63, #a35975); }
+.course-card.difficulty-advanced .card-header { background: linear-gradient(125deg, #182c47, #365a73); }
 .course-card .card-header .tag { color: #cfe8ed; opacity: 1; }
 .course-card .card-body { flex: 1; padding: 20px; }
 .course-card .card-body p { color: #46586a; }
@@ -482,6 +554,8 @@ button,
   .site-nav { height: 62px; padding: 0 18px; }
   .site-links a:not(.nav-cta) { display: none; }
   .site-logo { font-size: .86rem; }
+  .course-directory { align-items: start; flex-direction: column; gap: 20px; padding-top: 34px; }
+  .course-filter { flex-basis: auto; justify-content: flex-start; }
 }
 
 @media (prefers-reduced-motion: reduce) {

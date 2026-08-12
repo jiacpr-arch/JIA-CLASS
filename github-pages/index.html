@@ -179,6 +179,22 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
     <button class="filter-button" type="button" data-filter="2" aria-pressed="false">Workshop</button>
     <button class="filter-button" type="button" data-filter="3" aria-pressed="false">ACLS ขั้นสูง</button>
   </div>
+  <div class="course-legend" aria-label="คำอธิบายกลุ่มผู้เรียนและระดับความยาก">
+    <div class="legend-row">
+      <span class="legend-title">กลุ่มผู้เรียน</span>
+      <span class="legend-chip audience-public">คนทั่วไป</span>
+      <span class="legend-chip audience-organization">องค์กร</span>
+      <span class="legend-chip audience-medical">บุคลากรการแพทย์</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-title">ระดับ</span>
+      <span class="legend-chip difficulty-starter">เริ่มต้น</span>
+      <span class="legend-chip difficulty-foundation">พื้นฐาน</span>
+      <span class="legend-chip difficulty-continuing">ต่อยอด</span>
+      <span class="legend-chip difficulty-specialist">เฉพาะทาง</span>
+      <span class="legend-chip difficulty-advanced">ขั้นสูง</span>
+    </div>
+  </div>
 </section>
 
 <div class="group-title" data-level="advanced">04 — ACLS หลักสูตรขั้นสูง</div><div class="course-grid">
@@ -223,7 +239,7 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
   <a href="08_vascular.html" class="card-btn">ดูรายละเอียด →</a>
 </div></div><div class="group-title" data-level="starter">01 — เริ่มต้น: BLS / CPR &amp; AED</div><div class="course-grid">
 <div class="course-card">
-  <div class="card-header" style="background:linear-gradient(135deg,#1A2B5C,#0E1A3E)"><h3>B-CPR <span style="color:#F5C518">สพฉ.</span></h3><div class="tag">การช่วยชีวิตขั้นพื้นฐานสำหรับประชาชน</div></div>
+  <div class="card-header"><h3>B-CPR <span style="color:#F5C518">สพฉ.</span></h3><div class="tag">การช่วยชีวิตขั้นพื้นฐานสำหรับประชาชน</div></div>
   <div class="card-body"><p>CPR + AED + ช่วยผู้สำลัก — พร้อมใบรับรอง สพฉ. จองออนไลน์ได้</p><div class="card-meta">3 ชม. | 600 บาท/ท่าน | ศูนย์ LC210002</div></div>
   <a href="bcpr.html" class="card-btn" style="background:#F5C518;color:#1A2B5C">ดูรายละเอียด + จองออนไลน์ →</a>
 </div>
@@ -298,6 +314,38 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
 </footer>
 <script>
   (() => {
+    const courseProfiles = {
+      'bcpr.html': { audience: 'คนทั่วไป', audienceKey: 'public', level: 'เริ่มต้น', levelKey: 'starter' },
+      '09_bls_workplace.html': { audience: 'องค์กร', audienceKey: 'organization', level: 'พื้นฐาน', levelKey: 'foundation' },
+      '10_bls_hcp.html': { audience: 'บุคลากรการแพทย์', audienceKey: 'medical', level: 'พื้นฐาน', levelKey: 'foundation' },
+      '11_bls_lay.html': { audience: 'คนทั่วไป', audienceKey: 'public', level: 'เริ่มต้น', levelKey: 'starter' },
+      '12_cpr_aed.html': { audience: 'คนทั่วไป', audienceKey: 'public', level: 'เริ่มต้น', levelKey: 'starter' },
+      '13_aed_corp.html': { audience: 'องค์กร', audienceKey: 'organization', level: 'พื้นฐาน', levelKey: 'foundation' },
+      '14_iv_therapy.html': { audience: 'บุคลากรการแพทย์', audienceKey: 'medical', level: 'ต่อยอด', levelKey: 'continuing' },
+      '15_rrt.html': { audience: 'บุคลากรการแพทย์', audienceKey: 'medical', level: 'ต่อยอด', levelKey: 'continuing' },
+      '16_specimen.html': { audience: 'บุคลากรการแพทย์', audienceKey: 'medical', level: 'ต่อยอด', levelKey: 'continuing' },
+      '06_airway.html': { audience: 'บุคลากรการแพทย์', audienceKey: 'medical', level: 'เฉพาะทาง', levelKey: 'specialist' },
+      '07_defib.html': { audience: 'บุคลากรการแพทย์', audienceKey: 'medical', level: 'เฉพาะทาง', levelKey: 'specialist' },
+      '08_vascular.html': { audience: 'บุคลากรการแพทย์', audienceKey: 'medical', level: 'เฉพาะทาง', levelKey: 'specialist' },
+      '01_acls_full.html': { audience: 'บุคลากรการแพทย์', audienceKey: 'medical', level: 'ขั้นสูง', levelKey: 'advanced' },
+      '02_acls_drug.html': { audience: 'บุคลากรการแพทย์', audienceKey: 'medical', level: 'ขั้นสูง', levelKey: 'advanced' },
+      '03_acls_osce.html': { audience: 'บุคลากรการแพทย์', audienceKey: 'medical', level: 'ขั้นสูง', levelKey: 'advanced' },
+      '04_acls_osce_day2.html': { audience: 'บุคลากรการแพทย์', audienceKey: 'medical', level: 'ขั้นสูง', levelKey: 'advanced' },
+      '05_acls_team.html': { audience: 'บุคลากรการแพทย์', audienceKey: 'medical', level: 'ขั้นสูง', levelKey: 'advanced' }
+    };
+    document.querySelectorAll('.course-card').forEach((card) => {
+      const href = card.querySelector('.card-btn')?.getAttribute('href');
+      const profile = courseProfiles[href];
+      const header = card.querySelector('.card-header');
+      if (!profile || !header || header.querySelector('.course-tags')) return;
+      card.classList.add(`audience-${profile.audienceKey}`, `difficulty-${profile.levelKey}`);
+      header.insertAdjacentHTML('beforeend', `
+        <div class="course-tags" aria-label="กลุ่มผู้เรียน ${profile.audience}, ระดับ ${profile.level}">
+          <span class="course-chip audience-${profile.audienceKey}">${profile.audience}</span>
+          <span class="course-chip difficulty-${profile.levelKey}">ระดับ${profile.level}</span>
+        </div>
+      `);
+    });
     const buttons = [...document.querySelectorAll('.filter-button')];
     const learningOrder = ['starter', 'foundation', 'workshop', 'advanced'];
     const groupsByLevel = new Map([...document.querySelectorAll('.group-title')].map((title) => [
