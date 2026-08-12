@@ -117,8 +117,8 @@ tr:hover td{background:#FBFCFE}
         <div><label>ชื่อผู้จอง</label><input id="mbName" placeholder="ชื่อ-นามสกุล / บริษัท"></div>
         <div><label>เบอร์โทร</label><input id="mbTel" placeholder="08x-xxx-xxxx"></div>
         <div><label>อีเมล (ไม่บังคับ)</label><input id="mbEmail" type="email"></div>
-        <div><label>จำนวนคน</label><input id="mbPeople" type="number" value="1" min="1" max="100" oninput="mbSuggestPrice()"></div>
-        <div><label>ยอดรวม (บาท)</label><input id="mbPrice" type="number" min="0" value="600"><span class="muted">แก้ไขได้ กรณีมีส่วนลด/ราคาพิเศษ</span></div>
+        <div><label>จำนวนคน</label><input id="mbPeople" type="number" value="1" min="1" max="100"></div>
+        <div><label>ยอดรวม (บาท)</label><input id="mbPrice" type="number" min="0" placeholder="เว้นว่าง = ราคาคอร์ส × คน"><span class="muted">กรอกเฉพาะกรณีส่วนลด/ราคาพิเศษ</span></div>
         <div><label>ช่องทางชำระ</label><select id="mbPayMode"><option>โอนเงิน</option><option>เงินสด</option><option>PromptPay</option><option>ใบแจ้งหนี้</option><option>อื่นๆ</option></select></div>
         <div><label>สถานะการชำระ</label><select id="mbStatus"><option value="ชำระแล้ว">ชำระแล้ว</option><option value="รอตรวจสอบ">รอตรวจสอบ (ยังไม่ได้เงิน)</option></select></div>
       </div>
@@ -170,7 +170,7 @@ tr:hover td{background:#FBFCFE}
       <p style="margin-top:8px"><b>หน้าจองของลูกค้าว่างเปล่า</b> — ยังไม่ได้เปิดรอบอบรมเลย ไปแท็บ 📅 รอบอบรม แล้วเปิดรอบใหม่</p>
       <p style="margin-top:10px"><b>ลูกค้าโอนเงินผิดยอด</b> — อย่าเพิ่งกดอนุมัติ ทักไปสอบถามลูกค้าทาง LINE @jiacpr ก่อนเสมอ</p>
       <p style="margin-top:10px"><b>กดออกใบเซอร์ไม่ได้</b> — ต้องเป็นรายการที่สถานะ <span class="chip ref">ชำระแล้ว</span> เท่านั้น</p>
-      <p style="margin-top:10px"><b>จะรู้ได้อย่างไรว่ามีลูกค้าจองเข้ามา</b> — ระบบส่งแจ้งเตือนอัตโนมัติเข้า LINE ทีมงานและ/หรืออีเมลทันทีที่มีการจองใหม่ (ต้องตั้งค่าครั้งแรกตามคู่มือ docs/NOTIFICATIONS.md) และดูรายการทั้งหมดได้ที่แท็บ 🎟️ การจอง</p>
+      <p style="margin-top:10px"><b>จะรู้ได้อย่างไรว่ามีลูกค้าจองเข้ามา</b> — ระบบส่งข้อความ LINE แจ้งทีมงานทุกคนอัตโนมัติทันทีที่มีการจองใหม่ (ทั้งจองจากหน้าเว็บและที่แอดมิน/เซลล์ลงเอง) ไม่ต้องคอยเปิดหน้านี้เช็ค และดูรายการทั้งหมดย้อนหลังได้ที่แท็บ 🎟️ การจอง</p>
     </div>
     <div class="card">
       <h3>คู่มือฉบับเต็ม (PDF)</h3>
@@ -257,7 +257,6 @@ function showTab(name){
 }
 
 /* ---------- classes ---------- */
-const PRICE_PER_PERSON = 600;
 async function loadClasses(){
   const r = await api('admin_list_classes');
   if(!r.ok) return toast('โหลดรอบอบรมไม่สำเร็จ');
@@ -265,7 +264,7 @@ async function loadClasses(){
   const open = r.classes.filter(c=>c.status==='ready' && c.date>=today);
   const cur = document.getElementById('mbClass').value;
   document.getElementById('mbClass').innerHTML = '<option value="">— เลือกรอบเรียน —</option>' +
-    open.map(c=>`<option value="${esc(c.id)}">${thDate(c.date)} ${esc(c.time_slot)} (จองแล้ว ${c.booked}/${c.max_students})</option>`).join('');
+    open.map(c=>`<option value="${esc(c.id)}">${esc(c.course_key||c.course_name||'')} — ${thDate(c.date)} ${esc(c.time_slot)} (จองแล้ว ${c.booked}/${c.max_students})</option>`).join('');
   if(cur) document.getElementById('mbClass').value = cur;
   const chip = s => s==='ready'?'<span class="chip ready">เปิดรับ</span>'
     : s==='cancelled'?'<span class="chip off">ปิด/ยกเลิก</span>'
@@ -300,10 +299,6 @@ async function setClassStatus(id, status){
 }
 
 /* ---------- bookings ---------- */
-function mbSuggestPrice(){
-  const p = parseInt(document.getElementById('mbPeople').value,10);
-  if(Number.isInteger(p) && p>0) document.getElementById('mbPrice').value = p*PRICE_PER_PERSON;
-}
 async function manualBooking(){
   const body = {
     class_id: document.getElementById('mbClass').value,
@@ -328,8 +323,8 @@ async function manualBooking(){
     return toast('ผิดพลาด: '+(r.error||''));
   }
   toast('บันทึกการจองแล้ว (เลขที่ '+r.booking_id+')');
-  for(const id of ['mbName','mbTel','mbEmail','mbNote']) document.getElementById(id).value='';
-  document.getElementById('mbPeople').value=1; mbSuggestPrice();
+  for(const id of ['mbName','mbTel','mbEmail','mbNote','mbPrice']) document.getElementById(id).value='';
+  document.getElementById('mbPeople').value=1;
   document.getElementById('mbPdpa').checked=false;
   loadBookings(); loadClasses();
 }
@@ -342,7 +337,7 @@ async function loadBookings(){
     : '<span class="chip off">'+esc(s)+'</span>';
   document.querySelector('#tblBookings tbody').innerHTML = r.bookings.map(b=>`<tr>
     <td class="muted">${thDateTime(b.created_at)}</td>
-    <td><b>${esc(b.name)}</b>${b.channel==='bcpr-admin'?'<br><span class="chip done">แอดมิน/เซลล์'+(b.payment_mode?' · '+esc(b.payment_mode):'')+'</span>':''}</td>
+    <td><b>${esc(b.name)}</b>${b.channel==='class-admin'?'<br><span class="chip done">แอดมิน/เซลล์'+(b.payment_mode&&b.payment_mode!=='promptpay'?' · '+esc(b.payment_mode):'')+'</span>':''}</td>
     <td>${esc(b.tel)}${b.email?'<br><span class="muted">'+esc(b.email)+'</span>':''}</td>
     <td>${thDate(b.start_date)}<br><span class="muted">${esc(b.time_slot)}</span></td>
     <td>${b.total_people}</td>

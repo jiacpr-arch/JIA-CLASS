@@ -1,69 +1,84 @@
-# การแจ้งเตือนเมื่อมีการจองใหม่ (B-CPR)
+# การแจ้งเตือนเมื่อมีการจองใหม่
 
-เมื่อลูกค้าจองคลาสผ่านหน้าเว็บ (หรือแอดมินลงจองแทนลูกค้า) ระบบจะส่งข้อความแจ้งทีมงานอัตโนมัติทันที
-เลือกเปิดได้ 2 ช่องทาง (เปิดช่องทางเดียวหรือทั้งสองก็ได้ — ถ้าไม่ตั้งค่าเลย ระบบจะไม่ส่งอะไร และการจองยังทำงานตามปกติ)
+## สรุปสั้น: ทีมงานได้รับแจ้งเตือน LINE อยู่แล้ว ✅
 
-ตัวอย่างข้อความที่ทีมงานจะได้รับ:
+ทุกครั้งที่มีการจองเข้ามา — ไม่ว่าจะจากหน้าเว็บ class.morroo.com, ฟอร์มเดิมของ cpr.morroo.com
+หรือแอดมิน/เซลล์ลงจองแทนลูกค้าเอง — ระบบจะ **ส่งข้อความ LINE หาทีมงานทุกคนอัตโนมัติทันที**
+ไม่ต้องตั้งค่าอะไรเพิ่ม และไม่ต้องคอยเปิดหน้าแอดมินเช็คเอง
+
+ผู้รับคือทุกคนในตาราง `jiaroo_team` ที่มี `line_user_id` (ปัจจุบัน 5 คน)
+หากต้องการเพิ่ม/ลดผู้รับ ให้แก้แถวในตาราง `jiaroo_team`
+
+## กลไกทำงานอย่างไร
 
 ```
-🔔 มีการจองใหม่จากหน้าเว็บ (B-CPR)
+ลูกค้ากดจอง / แอดมินลงจอง
+        ↓
+INSERT ลงตาราง bookings
+        ↓
+trigger  notify_new_booking  (AFTER INSERT, เรียก net.http_post)
+        ↓
+edge function  notify-new-booking
+        ↓
+LINE Messaging API → push หาทุกคนใน jiaroo_team
+```
+
+ไฟล์ที่เกี่ยวข้อง: `supabase/functions/notify-new-booking/index.ts`
+Secrets ที่ใช้ (ตั้งไว้แล้ว): `LINE_CHANNEL_ACCESS_TOKEN`, `NOTIFY_WEBHOOK_SECRET`
+
+## ข้อความที่ทีมงานได้รับ
+
+ข้อความปรับตามช่องทางที่จองเข้ามา เพื่อให้รู้ว่าต้องทำอะไรต่อ:
+
+**จองจากเว็บ class.morroo.com** (ลูกค้าเลือกรอบเรียนและแนบสลิปมาแล้ว — ต้องตรวจสลิป)
+
+```
+🔔 มีการจองใหม่จากเว็บ class.morroo.com
+
 ชื่อ: สมชาย ใจดี
-โทร: 081-234-5678
-รอบเรียน: 2026-08-20 09:00-12:00
-จำนวน: 2 คน | ยอด: 1,200 บาท
-สถานะ: รอตรวจสอบสลิป
-เลขที่จอง: mabc123xyz
-ตรวจสลิป/อนุมัติได้ที่ https://class.morroo.com/bcpr-admin.html
+เบอร์: 081-234-5678
+คอร์ส: B-CPR การช่วยชีวิตขั้นพื้นฐานสำหรับประชาชน
+รอบเรียน: 22 ส.ค. 2569 13:00-16:00
+จำนวนคน: 2
+ยอด: 1200
+สถานะ: รอตรวจสอบ
+โน้ต: -
+
+ตรวจสลิปแล้วกดอนุมัติที่ https://class.morroo.com/bcpr-admin.html
 ```
 
-## ช่องทางที่ 1 — LINE (แนะนำ)
+**แอดมิน/เซลล์ลงจองแทนลูกค้า** (ที่นั่งถูกกันแล้ว ไม่ต้องติดต่อกลับ)
 
-ส่งข้อความผ่าน LINE Official Account (@jiacpr) ไปยังแชทของทีมงานโดยตรง
+```
+📝 แอดมิน/เซลส์ลงจองแทนลูกค้า
+… ชำระโดย: เงินสด (ชำระแล้ว) …
+```
 
-1. เข้า [LINE Developers Console](https://developers.line.biz/console/) ด้วยบัญชีที่ดูแล LINE OA @jiacpr
-   - ถ้ายังไม่มี Messaging API channel ให้สร้างจาก LINE Official Account Manager → Settings → Messaging API
-2. ในหน้า channel → แท็บ **Messaging API** → กด Issue **Channel access token (long-lived)** แล้วคัดลอกเก็บไว้
-3. หา **รหัสผู้รับข้อความ** (เลือกอย่างใดอย่างหนึ่ง):
-   - ส่งเข้าแชทส่วนตัวของเจ้าของ: ใช้ **Your user ID** (ขึ้นต้นด้วย `U`) ในแท็บ Basic settings ของ channel
-     และเจ้าของต้องกด "เพิ่มเพื่อน" LINE OA ไว้ก่อน
-   - ส่งเข้ากลุ่มทีมงาน: เชิญ LINE OA เข้ากลุ่มแล้วหา groupId (ขึ้นต้นด้วย `C`) ผ่าน webhook event
-4. ตั้งค่า secrets ใน Supabase — Dashboard โปรเจกต์ `jia-unified` → **Edge Functions → Secrets** (หรือใช้ CLI):
+**ฟอร์มเดิมของ cpr.morroo.com** (ยังไม่มีรอบเรียน/ยังไม่ชำระ — ต้องโทรกลับไปนัดวัน) — ข้อความเดิมไม่เปลี่ยน
 
-   ```bash
-   supabase secrets set LINE_CHANNEL_ACCESS_TOKEN="<token จากข้อ 2>"
-   supabase secrets set LINE_NOTIFY_TO="<userId หรือ groupId จากข้อ 3>"
-   ```
+## ทดสอบว่าแจ้งเตือนยังทำงานอยู่
 
-หมายเหตุ: LINE Messaging API แบบ push มีโควตาข้อความฟรีต่อเดือนตามแพ็กเกจ LINE OA (แพ็กเกจฟรีปัจจุบัน 300 ข้อความ/เดือน ซึ่งเพียงพอสำหรับแจ้งเตือนการจองภายในทีม)
-
-## ช่องทางที่ 2 — อีเมล (ผ่าน Resend)
-
-1. สมัคร [Resend](https://resend.com) (แพ็กเกจฟรี 3,000 อีเมล/เดือน) แล้วสร้าง API key
-2. ตั้งค่า secrets:
-
-   ```bash
-   supabase secrets set RESEND_API_KEY="re_xxxxxxxx"
-   supabase secrets set NOTIFY_EMAIL_TO="jiacpr@gmail.com"
-   # (ไม่บังคับ) ตั้งชื่อผู้ส่งเอง — ต้อง verify โดเมนกับ Resend ก่อน
-   supabase secrets set NOTIFY_EMAIL_FROM="B-CPR Booking <booking@morroo.com>"
-   ```
-
-   ถ้าไม่ตั้ง `NOTIFY_EMAIL_FROM` ระบบใช้ `onboarding@resend.dev` ซึ่ง Resend อนุญาตให้ส่งถึงอีเมลเจ้าของบัญชี Resend เท่านั้น — ใช้ทดสอบได้ แต่ระยะยาวแนะนำ verify โดเมน `morroo.com` แล้วตั้งค่านี้
-
-## ขั้นตอน deploy (ทำครั้งเดียวหลัง merge)
-
-การเปลี่ยนแปลงนี้มี 2 ส่วนที่ต้อง deploy ไปยัง Supabase (หน้าเว็บบน GitHub Pages อัปเดตเองเมื่อ merge เข้า main):
+เรียก edge function แบบ dry run (ไม่ส่ง LINE จริง) — จะได้จำนวนผู้รับและตัวอย่างข้อความกลับมา:
 
 ```bash
-# 1) รัน migration เพิ่มฟังก์ชันฐานข้อมูล (bcpr_admin_create_booking + ปรับ bcpr_create_booking)
-#    รันไฟล์ supabase/migrations/20260812_bcpr_admin_booking_notify.sql ใน SQL Editor
-#    ของโปรเจกต์ jia-unified หรือใช้ CLI: supabase db push
-
-# 2) deploy edge function เวอร์ชันใหม่
-supabase functions deploy bcpr-api
+curl -X POST "https://tpoiyykbgsgnrdwzgzvn.supabase.co/functions/v1/notify-new-booking?dry_run=1" \
+  -H "Content-Type: application/json" \
+  -H "x-webhook-secret: <ค่า NOTIFY_WEBHOOK_SECRET>" \
+  -d '{"record":{"name":"ทดสอบ","tel":"0800000000","channel":"class-web","course_name":"B-CPR","total_people":1,"final_price":600,"start_date":"2026-08-22","time_slot":"13:00-16:00","payment_status":"รอตรวจสอบ"}}'
 ```
 
-จากนั้นตั้งค่า secrets ตามช่องทางที่เลือกด้านบน แล้วทดสอบโดยลองจองผ่านหน้าเว็บ 1 รายการ
+## ถ้าอยากได้อีเมลเพิ่ม (ไม่บังคับ) ⚠️
+
+`bcpr-api` มีช่องทางแจ้งเตือน "เสริม" ที่**ปิดอยู่โดย default** — ตั้ง secrets เหล่านี้เมื่อจำเป็นเท่านั้น:
+
+| Secret | ผล |
+|---|---|
+| `RESEND_API_KEY` + `NOTIFY_EMAIL_TO` | ส่งอีเมลแจ้งเตือนเพิ่ม (สมัคร [Resend](https://resend.com) ฟรี 3,000 ฉบับ/เดือน) |
+| `NOTIFY_EMAIL_FROM` | ตั้งชื่อผู้ส่งเอง (ต้อง verify โดเมนกับ Resend ก่อน) |
+| `LINE_NOTIFY_TO` | ส่ง LINE เข้า userId/groupId ที่ระบุเพิ่มอีกหนึ่งที่ |
+
+**อย่าตั้ง `LINE_NOTIFY_TO` ถ้าผู้รับเป็นคนกลุ่มเดียวกับ `jiaroo_team`** — จะได้ข้อความ LINE ซ้ำสองรอบต่อการจองหนึ่งครั้ง
+เพราะ trigger ส่งให้อยู่แล้ว ใช้ก็ต่อเมื่ออยากส่งเข้าห้อง LINE อื่นที่ไม่ได้อยู่ในทีม
 
 ## การลงจองแทนลูกค้า (จองผ่านเซลล์)
 
@@ -71,6 +86,10 @@ supabase functions deploy bcpr-api
 ฟอร์ม "ลงจองแทนลูกค้า" ด้านบนสุด ใช้กับการจองที่มาทางเซลล์ โทรศัพท์ หรือหน้างาน:
 
 - ไม่บังคับแนบสลิป
-- ปรับยอดเงินได้ (กรณีราคาพิเศษ/ส่วนลด/เหมาองค์กร)
+- ปรับยอดเงินได้ (เว้นว่าง = ราคาคอร์ส × จำนวนคน) สำหรับกรณีส่วนลด/เหมาองค์กร
 - เลือกสถานะได้: **ชำระแล้ว** (รับเงินแล้ว) หรือ **รอตรวจสอบ** (ยังไม่ได้เงิน แต่กันที่นั่งไว้ก่อน)
 - รายการจะติดป้าย "แอดมิน/เซลล์" ในตาราง และตัดจำนวนที่นั่งร่วมกับการจองหน้าเว็บอัตโนมัติ
+  (กันที่นั่งซ้อนด้วย advisory lock เหมือนการจองหน้าเว็บ)
+
+เบื้องหลังคือ action `admin_create_booking` → ฟังก์ชัน `class_admin_create_booking`
+(ดู `supabase/migrations/20260812_class_admin_booking_notify.sql`) บันทึกเป็น `channel='class-admin'`
