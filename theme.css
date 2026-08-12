@@ -445,25 +445,75 @@ button:focus-visible { outline: 3px solid #70e1e9; outline-offset: 3px; }
 .disclaimer { color: var(--muted); }
 
 .group-title {
-  color: var(--navy-900);
+  min-height: 228px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  color: #fff;
   border-bottom: 0;
-  margin-top: 42px;
-  padding: 0 0 12px 16px;
+  border-radius: 20px 20px 0 0;
+  margin-top: 66px;
+  padding: 34px 34px 52px;
   position: relative;
+  overflow: hidden;
+  box-shadow: 0 18px 38px rgba(16,42,67,.14);
+  background-position: center;
+  background-size: cover;
 }
 .group-title::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 4px;
-  bottom: 12px;
-  width: 5px;
+  left: 34px;
+  top: auto;
+  bottom: 28px;
+  width: 38px;
+  height: 3px;
   border-radius: 8px;
-  background: var(--teal-500);
+  background: #8ee2e8;
+  z-index: 1;
 }
+.group-title::after {
+  position: relative;
+  z-index: 1;
+  max-width: 530px;
+  margin-top: 8px;
+  color: rgba(255,255,255,.82);
+  font-size: .92rem;
+  font-weight: 400;
+}
+.group-title[data-level="starter"] {
+  background-image:
+    linear-gradient(90deg, rgba(4,45,49,.92), rgba(4,65,68,.69) 48%, rgba(4,65,68,.12)),
+    url('assets/category-bls-community.png');
+}
+.group-title[data-level="starter"]::after { content: 'สำหรับทุกคน — เริ่มฝึกได้โดยไม่จำเป็นต้องมีพื้นฐาน'; }
+.group-title[data-level="foundation"] {
+  background-image:
+    linear-gradient(90deg, rgba(6,21,43,.94), rgba(12,45,76,.70) 48%, rgba(12,45,76,.18)),
+    url('assets/category-clinical-skills.png');
+}
+.group-title[data-level="foundation"]::after { content: 'ต่อยอดทักษะสำหรับองค์กรและบุคลากรที่ต้องใช้งานในหน้าที่จริง'; }
+.group-title[data-level="workshop"] {
+  background-image:
+    linear-gradient(90deg, rgba(31,20,55,.92), rgba(69,37,77,.68) 48%, rgba(69,37,77,.15)),
+    url('assets/simcpr-training.png');
+}
+.group-title[data-level="workshop"]::after { content: 'ฝึกเชิงลึกสำหรับผู้ที่ต้องการความแม่นยำในสถานการณ์เฉพาะทาง'; }
+.group-title[data-level="advanced"] {
+  background-image:
+    linear-gradient(90deg, rgba(6,17,30,.94), rgba(12,44,69,.70) 48%, rgba(12,44,69,.16)),
+    url('assets/jia-class-hero.png');
+}
+.group-title[data-level="advanced"]::after { content: 'สำหรับบุคลากรการแพทย์ที่ต้องการฝึกการช่วยชีวิตขั้นสูงและการทำงานเป็นทีม'; }
 .group-title.is-hidden,
 .course-grid.is-hidden { display: none; }
-.course-grid { gap: 24px; }
+.group-title + .course-grid {
+  position: relative;
+  z-index: 2;
+  gap: 24px;
+  margin: -28px 0 62px;
+  padding: 0 26px;
+}
 .course-card {
   display: flex;
   flex-direction: column;
@@ -548,6 +598,9 @@ button,
   .experience { grid-template-columns: 1fr; margin: 56px 0; }
   .experience-media { min-height: 360px; }
   .experience-copy { padding: 40px 22px 50px; }
+  .group-title { min-height: 196px; margin-top: 52px; padding: 28px 22px 46px; border-radius: 16px 16px 0 0; }
+  .group-title::before { left: 22px; bottom: 24px; }
+  .group-title + .course-grid { margin: -20px 0 46px; padding: 0 12px; }
 }
 
 @media (max-width: 760px) {
