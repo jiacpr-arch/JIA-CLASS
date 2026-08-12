@@ -1,8 +1,10 @@
-// bcpr-api — backend สำหรับระบบจองคอร์ส B-CPR (JIA-CLASS)
-// public: list_classes, create_booking, verify_cert
-// admin (header x-admin-key): จัดการรอบอบรม/การจอง/ใบเซอร์ เฉพาะ course_key='B-CPR' / channel bcpr-web + bcpr-admin
+// bcpr-api — backend สำหรับระบบจองคอร์สออนไลน์ของ JIA TRAINER CENTER (หลายคอร์ส)
+// public: list_courses, list_classes, create_booking, verify_cert
+// admin (header x-admin-key): จัดการคอร์ส/รอบอบรม/การจอง/ใบเซอร์ — เฉพาะคอร์สที่ cert_prefix ไม่เป็น null
+//   (courses.cert_prefix is not null = คอร์สที่อยู่ในระบบจองนี้; แถว joincourse/privateclass
+//    ของ cpr.morroo.com มี cert_prefix เป็น null เสมอ จึงไม่ถูกดึง/แก้ไขโดยฟังก์ชันนี้เลย)
 // แจ้งเตือนการจองใหม่ผ่าน LINE OA / อีเมล — ดู docs/NOTIFICATIONS.md และ block "notifications" ด้านล่าง
-// รหัสแอดมินเป็นของระบบ B-CPR โดยเฉพาะ (แยกจาก ADMIN_API_KEY เดิมของ cpr.morroo.com/admin)
+// รหัสแอดมินเป็นของระบบนี้โดยเฉพาะ (แยกจาก ADMIN_API_KEY เดิมของ cpr.morroo.com/admin)
 // เก็บเป็น SHA-256 hash ในตาราง bcpr_admin_auth (RLS ปิดสนิท เข้าถึงได้เฉพาะ service role)
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -23,15 +25,20 @@ async function isValidAdminKey(key: string): Promise<boolean> {
   return timingSafeEq(await sha256Hex(key), data.key_hash);
 }
 
-const COURSE_KEY = "B-CPR";
-const COURSE_NAME = "B-CPR การช่วยชีวิตขั้นพื้นฐานสำหรับประชาชน";
-const CHANNEL = "bcpr-web";
-const ADMIN_CHANNEL = "bcpr-admin"; // จองที่แอดมิน/เซลล์ลงแทนลูกค้า
-const ADMIN_CHANNELS = [CHANNEL, ADMIN_CHANNEL];
+// ก่อนหน้านี้ระบบนี้รองรับแค่คอร์สเดียว (B-CPR) — ค่าคงที่ด้านล่างคงไว้เป็นค่า default
+// เพื่อให้หน้าเว็บเก่าที่ผู้ใช้ค้าง cache ไว้ในเบราว์เซอร์ (ยังไม่ได้ส่ง course_key มา) ทำงานต่อได้ปกติ
+const LEGACY_COURSE_KEY = "B-CPR";
+const WEB_CHANNELS = ["bcpr-web", "class-web"]; // ช่องทางเก่า + ใหม่ ที่ลูกค้าจองเองผ่านหน้าเว็บ
+const SALES_CHANNELS = ["bcpr-admin", "class-admin"]; // ช่องทางเก่า + ใหม่ ที่แอดมิน/เซลล์ลงจองแทนลูกค้า
+const CHANNELS = [...WEB_CHANNELS, ...SALES_CHANNELS]; // ช่องทางทั้งหมดที่ตารางนี้เป็นเจ้าของ
+const NEW_CHANNEL = "class-web";
+const NEW_SALES_CHANNEL = "class-admin";
 const SLIP_BUCKET = "slips";
-const SLIP_PREFIX = "bcpr/";
+const SLIP_PREFIXES = ["bcpr/", "class/"]; // path เก่า + ใหม่ ที่อนุญาตให้ sign/upload
+const NEW_SLIP_PREFIX = "class/";
 const HOLD_STATUSES = ["รอตรวจสอบ", "ชำระแล้ว"];
 const CERT_VALID_YEARS = 2;
+const CERT_CODE_RE = /^[A-Z]{4}-\d{4}-\d{4}$/;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +66,7 @@ function certExpiry(issuedAt: string): string {
   return d.toISOString();
 }
 
-// ---------- notifications (แจ้งทีมงานเมื่อมีการจองใหม่) ----------
+// ---------- notifications (แจ้งทีมงานเมื่อมีการจองใหม่ — ทุกคอร์สที่ระบบนี้จัดการ) ----------
 // ตั้งค่า secrets ใน Supabase (ตั้งอย่างน้อย 1 ช่องทาง ไม่ตั้งเลย = ไม่แจ้งเตือน):
 //   LINE_CHANNEL_ACCESS_TOKEN + LINE_NOTIFY_TO  → แจ้งผ่าน LINE OA (push ไปยัง userId/groupId ของทีมงาน)
 //   RESEND_API_KEY + NOTIFY_EMAIL_TO            → แจ้งผ่านอีเมล (Resend), NOTIFY_EMAIL_FROM (ไม่บังคับ)
@@ -67,12 +74,13 @@ const LINE_TOKEN = Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN") ?? "";
 const LINE_TO = Deno.env.get("LINE_NOTIFY_TO") ?? "";
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const EMAIL_TO = Deno.env.get("NOTIFY_EMAIL_TO") ?? "";
-const EMAIL_FROM = Deno.env.get("NOTIFY_EMAIL_FROM") || "B-CPR Booking <onboarding@resend.dev>";
+const EMAIL_FROM = Deno.env.get("NOTIFY_EMAIL_FROM") || "JIA Booking <onboarding@resend.dev>";
 const ADMIN_PAGE_URL = "https://class.morroo.com/bcpr-admin.html";
 
 type BookingNotify = {
   source: "web" | "admin";
   bookingId: string;
+  courseName: string;
   name: string;
   tel: string;
   people: number;
@@ -85,7 +93,7 @@ type BookingNotify = {
 
 function notifyText(n: BookingNotify): string {
   const lines = [
-    n.source === "web" ? "🔔 มีการจองใหม่จากหน้าเว็บ (B-CPR)" : "📝 แอดมิน/เซลล์ลงจองใหม่ (B-CPR)",
+    n.source === "web" ? `🔔 มีการจองใหม่จากหน้าเว็บ (${n.courseName})` : `📝 แอดมิน/เซลล์ลงจองใหม่ (${n.courseName})`,
     `ชื่อ: ${n.name}`,
     `โทร: ${n.tel}`,
     `รอบเรียน: ${n.date ?? "-"} ${n.timeSlot ?? ""}`.trim(),
@@ -121,7 +129,7 @@ async function sendEmailNotify(subject: string, text: string): Promise<void> {
 // ส่งแจ้งเตือนแบบไม่บล็อกการตอบกลับลูกค้า และไม่ทำให้การจองล้มถ้าส่งไม่สำเร็จ
 function notifyNewBooking(n: BookingNotify): void {
   const text = notifyText(n);
-  const subject = `${n.source === "web" ? "🔔 จองใหม่" : "📝 แอดมินลงจอง"} B-CPR: ${n.name} (${n.people} คน)`;
+  const subject = `${n.source === "web" ? "🔔 จองใหม่" : "📝 แอดมินลงจอง"} ${n.courseName}: ${n.name} (${n.people} คน)`;
   const job = Promise.allSettled([sendLineNotify(text), sendEmailNotify(subject, text)]);
   // deno-lint-ignore no-explicit-any
   const rt = (globalThis as any).EdgeRuntime;
@@ -140,34 +148,67 @@ async function seatsTaken(classIds: string[]): Promise<Record<string, number>> {
   return taken;
 }
 
-async function getConfig() {
-  const [{ data: course }, { data: settings }] = await Promise.all([
-    db.from("courses").select("price").eq("key", COURSE_KEY).single(),
-    db.from("settings").select("key,value").in("key", ["bcpr_promptpay_id", "bcpr_promptpay_name"]),
-  ]);
+// คอร์สที่ "อยู่ในระบบจองนี้" ทั้งหมด (รวมที่ปิดรับจองชั่วคราวด้วย) — ใช้คำนี้ทุกที่ที่ต้องกันไม่ให้
+// แตะแถว courses ของ cpr.morroo.com (joincourse/privateclass ซึ่ง cert_prefix เป็น null เสมอ)
+async function getManagedCourses() {
+  const { data, error } = await db.from("courses")
+    .select("key,label,price,online_booking,max_students,time_slots,duration_hours,total_days,description,cert_prefix")
+    .not("cert_prefix", "is", null);
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function getPromptpayConfig() {
+  const { data: settings } = await db.from("settings").select("key,value").in("key", ["bcpr_promptpay_id", "bcpr_promptpay_name"]);
   const s: Record<string, string> = {};
   for (const row of settings ?? []) s[row.key] = row.value;
-  return {
-    price: Number(course?.price ?? 600),
-    promptpay_id: s["bcpr_promptpay_id"] ?? "PLACEHOLDER",
-    promptpay_name: s["bcpr_promptpay_name"] ?? "",
-  };
+  return { promptpay_id: s["bcpr_promptpay_id"] ?? "PLACEHOLDER", promptpay_name: s["bcpr_promptpay_name"] ?? "" };
 }
 
 // ---------- public actions ----------
 
-async function listClasses() {
+async function listCourses() {
+  const courses = await getManagedCourses();
+  const bookable = courses.filter((c) => c.online_booking);
+  const today = new Date().toISOString().slice(0, 10);
+  const keys = bookable.map((c) => c.key);
+  let upcomingCounts: Record<string, number> = {};
+  if (keys.length) {
+    const { data: classes, error } = await db.from("classes")
+      .select("course_key").in("course_key", keys).eq("status", "ready").gte("date", today);
+    if (error) throw error;
+    for (const c of classes ?? []) upcomingCounts[c.course_key] = (upcomingCounts[c.course_key] ?? 0) + 1;
+  }
+  const promptpay = await getPromptpayConfig();
+  return json({
+    ok: true,
+    ...promptpay,
+    courses: bookable.map((c) => ({
+      key: c.key, label: c.label, price: Number(c.price ?? 0),
+      duration_hours: Number(c.duration_hours ?? 0), total_days: c.total_days ?? 1,
+      max_students: c.max_students, description: c.description ?? "",
+      upcoming_classes: upcomingCounts[c.key] ?? 0,
+    })),
+  });
+}
+
+async function listClasses(body: Record<string, unknown>) {
+  const courseKey = String(body.course_key ?? LEGACY_COURSE_KEY);
   const today = new Date().toISOString().slice(0, 10);
   const { data: classes, error } = await db.from("classes")
-    .select("id,date,time_slot,place,max_students,note")
-    .eq("course_key", COURSE_KEY).eq("status", "ready").gte("date", today)
+    .select("id,date,time_slot,place,max_students,note,course_key")
+    .eq("course_key", courseKey).eq("status", "ready").gte("date", today)
     .order("date", { ascending: true });
   if (error) throw error;
   const taken = await seatsTaken((classes ?? []).map((c) => c.id));
-  const config = await getConfig();
+
+  const { data: course } = await db.from("courses")
+    .select("price").eq("key", courseKey).not("cert_prefix", "is", null).maybeSingle();
+  const promptpay = await getPromptpayConfig();
+
   return json({
     ok: true,
-    config,
+    config: { price: Number(course?.price ?? 600), ...promptpay },
     classes: (classes ?? []).map((c) => ({
       id: c.id, date: c.date, time_slot: c.time_slot, place: c.place ?? "",
       max_students: c.max_students,
@@ -206,13 +247,13 @@ async function createBooking(body: Record<string, unknown>) {
   if (bytes.length < 1024 || bytes.length > 5 * 1024 * 1024) return json({ ok: false, error: "SLIP_SIZE" }, 400);
 
   const bookingId = genId();
-  const slipPath = `${SLIP_PREFIX}${bookingId}.${ext}`;
+  const slipPath = `${NEW_SLIP_PREFIX}${bookingId}.${ext}`;
   const up = await db.storage.from(SLIP_BUCKET).upload(slipPath, bytes, { contentType: slipMime });
   if (up.error) return json({ ok: false, error: "SLIP_UPLOAD_FAILED" }, 500);
 
-  const { data, error } = await db.rpc("bcpr_create_booking", {
+  const { data, error } = await db.rpc("class_create_booking", {
     p_id: bookingId, p_class_id: classId, p_name: name, p_tel: tel, p_email: email,
-    p_people: people, p_note: note, p_slip_path: slipPath, p_course_name: COURSE_NAME,
+    p_people: people, p_note: note, p_slip_path: slipPath,
   });
   if (error) {
     await db.storage.from(SLIP_BUCKET).remove([slipPath]).catch(() => {});
@@ -223,25 +264,31 @@ async function createBooking(body: Record<string, unknown>) {
     return json({ ok: false, error: data?.error ?? "BOOKING_FAILED", seats_left: data?.seats_left }, 409);
   }
   notifyNewBooking({
-    source: "web", bookingId, name, tel, people, total: Number(data.total ?? 0),
+    source: "web", bookingId, courseName: data.course_name ?? data.course_key ?? "คอร์สอบรม",
+    name, tel, people, total: Number(data.total ?? 0),
     date: data.date, timeSlot: data.time_slot, paymentStatus: "รอตรวจสอบสลิป", note,
   });
-  return json({ ok: true, booking_id: bookingId, status: "รอตรวจสอบ", total: data.total });
+  return json({ ok: true, booking_id: bookingId, status: "รอตรวจสอบ", total: data.total, course_key: data.course_key });
 }
 
 async function verifyCert(body: Record<string, unknown>) {
   const code = String(body.code ?? "").trim().toUpperCase();
-  if (!/^BCPR-\d{4}-\d{4}$/.test(code)) return json({ ok: true, found: false });
+  if (!CERT_CODE_RE.test(code)) return json({ ok: true, found: false });
   const { data, error } = await db.from("certificates")
-    .select("code,learner_name,issued_at,location,revoked_at")
-    .eq("code", code).eq("kind", COURSE_KEY).maybeSingle();
+    .select("code,kind,learner_name,issued_at,location,revoked_at")
+    .eq("code", code).maybeSingle();
   if (error) throw error;
   if (!data) return json({ ok: true, found: false });
+
+  const { data: course } = await db.from("courses")
+    .select("label").eq("key", data.kind).not("cert_prefix", "is", null).maybeSingle();
+  if (!course) return json({ ok: true, found: false }); // ไม่ใช่คอร์สของระบบนี้ (เช่น theory/practical เดิม)
+
   return json({
     ok: true, found: true,
     cert: {
-      code: data.code, learner_name: data.learner_name,
-      course: `หลักสูตรการกู้ชีพขั้นพื้นฐาน (Basic Cardiopulmonary Resuscitation: B-CPR)`,
+      code: data.code, kind: data.kind, learner_name: data.learner_name,
+      course: course.label,
       issued_at: data.issued_at, expires_at: certExpiry(data.issued_at),
       location: data.location ?? "", revoked: !!data.revoked_at,
     },
@@ -250,24 +297,69 @@ async function verifyCert(body: Record<string, unknown>) {
 
 // ---------- admin actions ----------
 
-async function adminListClasses() {
-  const { data: classes, error } = await db.from("classes")
-    .select("id,date,time_slot,place,max_students,status,note,created_at")
-    .eq("course_key", COURSE_KEY).order("date", { ascending: false });
+async function adminListCourses() {
+  const courses = await getManagedCourses();
+  return json({ ok: true, courses });
+}
+
+async function adminUpdateCourse(body: Record<string, unknown>) {
+  const key = String(body.key ?? "");
+  const patchIn = (body.patch ?? {}) as Record<string, unknown>;
+  const patch: Record<string, unknown> = {};
+  if (patchIn.price !== undefined) {
+    const p = Number(patchIn.price);
+    if (!Number.isFinite(p) || p < 0) return json({ ok: false, error: "INVALID_PRICE" }, 400);
+    patch.price = p;
+  }
+  if (patchIn.online_booking !== undefined) patch.online_booking = patchIn.online_booking === true;
+  if (patchIn.max_students !== undefined) {
+    const m = Number(patchIn.max_students);
+    if (!Number.isInteger(m) || m < 1 || m > 200) return json({ ok: false, error: "INVALID_MAX" }, 400);
+    patch.max_students = m;
+  }
+  if (patchIn.description !== undefined) patch.description = String(patchIn.description).trim();
+  if (Object.keys(patch).length === 0) return json({ ok: false, error: "EMPTY_PATCH" }, 400);
+  const { data, error } = await db.from("courses").update(patch)
+    .eq("key", key).not("cert_prefix", "is", null).select("key");
+  if (error) throw error;
+  if (!data?.length) return json({ ok: false, error: "NOT_FOUND" }, 404);
+  return json({ ok: true });
+}
+
+async function managedCourseKeys(): Promise<string[]> {
+  const { data, error } = await db.from("courses").select("key").not("cert_prefix", "is", null);
+  if (error) throw error;
+  return (data ?? []).map((c) => c.key);
+}
+
+async function adminListClasses(body: Record<string, unknown>) {
+  const keys = await managedCourseKeys();
+  let q = db.from("classes")
+    .select("id,date,time_slot,place,max_students,status,note,created_at,course_key,course_name")
+    .in("course_key", keys).order("date", { ascending: false });
+  if (body.course_key) q = q.eq("course_key", String(body.course_key));
+  const { data: classes, error } = await q;
   if (error) throw error;
   const taken = await seatsTaken((classes ?? []).map((c) => c.id));
   return json({ ok: true, classes: (classes ?? []).map((c) => ({ ...c, booked: taken[c.id] ?? 0 })) });
 }
 
 async function adminCreateClass(body: Record<string, unknown>) {
+  const courseKey = String(body.course_key ?? LEGACY_COURSE_KEY);
   const date = String(body.date ?? "");
   const timeSlot = String(body.time_slot ?? "").trim();
   const maxStudents = Number(body.max_students ?? 0);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ ok: false, error: "INVALID_DATE" }, 400);
   if (!timeSlot) return json({ ok: false, error: "INVALID_TIME" }, 400);
   if (!Number.isInteger(maxStudents) || maxStudents < 1 || maxStudents > 200) return json({ ok: false, error: "INVALID_MAX" }, 400);
+
+  const { data: course, error: cErr } = await db.from("courses")
+    .select("key,label").eq("key", courseKey).not("cert_prefix", "is", null).maybeSingle();
+  if (cErr) throw cErr;
+  if (!course) return json({ ok: false, error: "INVALID_COURSE" }, 400);
+
   const row = {
-    id: genId(), course_key: COURSE_KEY, course_name: COURSE_NAME,
+    id: genId(), course_key: course.key, course_name: course.label,
     date, time_slot: timeSlot, max_students: maxStudents,
     required_instructors: Math.max(1, Math.ceil(maxStudents / 8)),
     status: "ready", place: String(body.place ?? "").trim(), note: String(body.note ?? "").trim(),
@@ -301,8 +393,9 @@ async function adminUpdateClass(body: Record<string, unknown>) {
     patch.status = patchIn.status;
   }
   if (Object.keys(patch).length === 0) return json({ ok: false, error: "EMPTY_PATCH" }, 400);
+  const keys = await managedCourseKeys();
   const { data, error } = await db.from("classes").update(patch)
-    .eq("id", id).eq("course_key", COURSE_KEY).select("id");
+    .eq("id", id).in("course_key", keys).select("id");
   if (error) throw error;
   if (!data?.length) return json({ ok: false, error: "NOT_FOUND" }, 404);
   return json({ ok: true });
@@ -310,9 +403,10 @@ async function adminUpdateClass(body: Record<string, unknown>) {
 
 async function adminListBookings(body: Record<string, unknown>) {
   let q = db.from("bookings")
-    .select("id,name,tel,email,class_id,channel,total_people,final_price,payment_mode,payment_slip,payment_status,start_date,time_slot,note,attended_at,created_at")
-    .in("channel", ADMIN_CHANNELS).order("created_at", { ascending: false }).limit(500);
+    .select("id,name,tel,email,class_id,channel,course_type,course_name,total_people,final_price,payment_mode,payment_slip,payment_status,start_date,time_slot,note,attended_at,created_at")
+    .in("channel", CHANNELS).order("created_at", { ascending: false }).limit(500);
   if (body.class_id) q = q.eq("class_id", String(body.class_id));
+  if (body.course_key) q = q.eq("course_type", String(body.course_key));
   if (body.payment_status) q = q.eq("payment_status", String(body.payment_status));
   const { data, error } = await q;
   if (error) throw error;
@@ -321,7 +415,7 @@ async function adminListBookings(body: Record<string, unknown>) {
 
 async function adminSignSlip(body: Record<string, unknown>) {
   const path = String(body.path ?? "");
-  if (!path.startsWith(SLIP_PREFIX)) return json({ ok: false, error: "INVALID_PATH" }, 400);
+  if (!SLIP_PREFIXES.some((p) => path.startsWith(p))) return json({ ok: false, error: "INVALID_PATH" }, 400);
   const { data, error } = await db.storage.from(SLIP_BUCKET).createSignedUrl(path, 600);
   if (error) return json({ ok: false, error: "SIGN_FAILED" }, 500);
   return json({ ok: true, url: data.signedUrl });
@@ -341,13 +435,14 @@ async function adminUpdateBooking(body: Record<string, unknown>) {
   if (patchIn.note !== undefined) patch.note = String(patchIn.note).trim();
   if (Object.keys(patch).length === 0) return json({ ok: false, error: "EMPTY_PATCH" }, 400);
   const { data, error } = await db.from("bookings").update(patch)
-    .eq("id", id).in("channel", ADMIN_CHANNELS).select("id");
+    .eq("id", id).in("channel", CHANNELS).select("id");
   if (error) throw error;
   if (!data?.length) return json({ ok: false, error: "NOT_FOUND" }, 404);
   return json({ ok: true });
 }
 
 // ลงจองแทนลูกค้า (จองผ่านเซลล์/โทร/หน้างาน) — ไม่บังคับสลิป กำหนดราคา/สถานะ/ช่องทางชำระได้
+// ดึงคอร์ส/ราคาจาก class เอง (join classes→courses) แทนที่จะ hardcode คอร์สเดียวเหมือนของเดิม
 async function adminCreateBooking(body: Record<string, unknown>) {
   const name = String(body.name ?? "").trim();
   const tel = String(body.tel ?? "").trim();
@@ -371,30 +466,31 @@ async function adminCreateBooking(body: Record<string, unknown>) {
   }
 
   const bookingId = genId();
-  const { data, error } = await db.rpc("bcpr_admin_create_booking", {
+  const { data, error } = await db.rpc("class_admin_create_booking", {
     p_id: bookingId, p_class_id: classId, p_name: name, p_tel: tel, p_email: email,
-    p_people: people, p_note: note, p_course_name: COURSE_NAME,
+    p_people: people, p_note: note,
     p_final_price: finalPrice, p_payment_mode: paymentMode, p_payment_status: paymentStatus,
   });
   if (error) return json({ ok: false, error: "BOOKING_FAILED" }, 500);
   if (!data?.ok) return json({ ok: false, error: data?.error ?? "BOOKING_FAILED", seats_left: data?.seats_left }, 409);
 
   notifyNewBooking({
-    source: "admin", bookingId, name, tel, people, total: Number(data.total ?? 0),
+    source: "admin", bookingId, courseName: data.course_name ?? data.course_key ?? "คอร์สอบรม",
+    name, tel, people, total: Number(data.total ?? 0),
     date: data.date, timeSlot: data.time_slot, paymentStatus, note,
   });
-  return json({ ok: true, booking_id: bookingId, status: paymentStatus, total: data.total });
+  return json({ ok: true, booking_id: bookingId, status: paymentStatus, total: data.total, course_key: data.course_key });
 }
 
-async function nextCertCode(): Promise<string> {
+async function nextCertCode(prefix: string): Promise<string> {
   const year = new Date().getFullYear();
-  const prefix = `BCPR-${year}-`;
+  const codePrefix = `${prefix}-${year}-`;
   const { data } = await db.from("certificates")
-    .select("code").like("code", `${prefix}%`)
+    .select("code").like("code", `${codePrefix}%`)
     .order("code", { ascending: false }).limit(1);
   const last = data?.[0]?.code;
-  const n = last ? parseInt(last.slice(prefix.length), 10) + 1 : 1;
-  return prefix + String(n).padStart(4, "0");
+  const n = last ? parseInt(last.slice(codePrefix.length), 10) + 1 : 1;
+  return codePrefix + String(n).padStart(4, "0");
 }
 
 async function adminIssueCert(body: Record<string, unknown>) {
@@ -403,10 +499,15 @@ async function adminIssueCert(body: Record<string, unknown>) {
   if (!attendees.length || attendees.length > 20) return json({ ok: false, error: "INVALID_ATTENDEES" }, 400);
 
   const { data: booking, error: bErr } = await db.from("bookings")
-    .select("id,payment_status").eq("id", bookingId).in("channel", ADMIN_CHANNELS).maybeSingle();
+    .select("id,payment_status,course_type").eq("id", bookingId).in("channel", CHANNELS).maybeSingle();
   if (bErr) throw bErr;
   if (!booking) return json({ ok: false, error: "BOOKING_NOT_FOUND" }, 404);
   if (booking.payment_status !== "ชำระแล้ว") return json({ ok: false, error: "NOT_PAID" }, 400);
+
+  const { data: course, error: courseErr } = await db.from("courses")
+    .select("key,cert_prefix").eq("key", booking.course_type).not("cert_prefix", "is", null).maybeSingle();
+  if (courseErr) throw courseErr;
+  if (!course) return json({ ok: false, error: "INVALID_COURSE" }, 400);
 
   const issued: Array<{ name: string; code: string; expires_at: string }> = [];
   for (const a of attendees) {
@@ -416,10 +517,10 @@ async function adminIssueCert(body: Record<string, unknown>) {
     const phone = String((a as Record<string, unknown>).phone ?? "").trim();
     let inserted = false;
     for (let attempt = 0; attempt < 5 && !inserted; attempt++) {
-      const code = await nextCertCode();
+      const code = await nextCertCode(course.cert_prefix as string);
       const issuedAt = new Date().toISOString();
       const { error } = await db.from("certificates").insert({
-        learner_id: crypto.randomUUID(), kind: COURSE_KEY, code,
+        learner_id: crypto.randomUUID(), kind: course.key, code,
         learner_name: name, learner_email: email, learner_phone: phone,
         issued_at: issuedAt, location: "JIA TRAINER CENTER",
       });
@@ -437,19 +538,23 @@ async function adminIssueCert(body: Record<string, unknown>) {
 
 async function adminRevokeCert(body: Record<string, unknown>) {
   const code = String(body.code ?? "").trim().toUpperCase();
-  if (!code.startsWith("BCPR-")) return json({ ok: false, error: "INVALID_CODE" }, 400);
+  if (!CERT_CODE_RE.test(code)) return json({ ok: false, error: "INVALID_CODE" }, 400);
+  const keys = await managedCourseKeys();
   const { data, error } = await db.from("certificates")
     .update({ revoked_at: new Date().toISOString() })
-    .eq("code", code).eq("kind", COURSE_KEY).select("code");
+    .eq("code", code).in("kind", keys).select("code");
   if (error) throw error;
   if (!data?.length) return json({ ok: false, error: "NOT_FOUND" }, 404);
   return json({ ok: true });
 }
 
-async function adminListCerts() {
-  const { data, error } = await db.from("certificates")
-    .select("code,learner_name,issued_at,revoked_at")
-    .eq("kind", COURSE_KEY).order("issued_at", { ascending: false }).limit(500);
+async function adminListCerts(body: Record<string, unknown>) {
+  const keys = await managedCourseKeys();
+  let q = db.from("certificates")
+    .select("code,kind,learner_name,issued_at,revoked_at")
+    .in("kind", keys).order("issued_at", { ascending: false }).limit(500);
+  if (body.course_key) q = q.eq("kind", String(body.course_key));
+  const { data, error } = await q;
   if (error) throw error;
   return json({
     ok: true,
@@ -473,7 +578,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     // public
-    if (action === "list_classes") return await listClasses();
+    if (action === "list_courses") return await listCourses();
+    if (action === "list_classes") return await listClasses(body);
     if (action === "create_booking") return await createBooking(body);
     if (action === "verify_cert") return await verifyCert(body);
 
@@ -483,7 +589,9 @@ Deno.serve(async (req: Request) => {
       if (!(await isValidAdminKey(key))) return json({ ok: false, error: "UNAUTHORIZED" }, 401);
       switch (action) {
         case "admin_ping": return json({ ok: true });
-        case "admin_list_classes": return await adminListClasses();
+        case "admin_list_courses": return await adminListCourses();
+        case "admin_update_course": return await adminUpdateCourse(body);
+        case "admin_list_classes": return await adminListClasses(body);
         case "admin_create_class": return await adminCreateClass(body);
         case "admin_update_class": return await adminUpdateClass(body);
         case "admin_list_bookings": return await adminListBookings(body);
@@ -492,7 +600,7 @@ Deno.serve(async (req: Request) => {
         case "admin_update_booking": return await adminUpdateBooking(body);
         case "admin_issue_cert": return await adminIssueCert(body);
         case "admin_revoke_cert": return await adminRevokeCert(body);
-        case "admin_list_certs": return await adminListCerts();
+        case "admin_list_certs": return await adminListCerts(body);
       }
     }
     return json({ ok: false, error: "UNKNOWN_ACTION" }, 400);
