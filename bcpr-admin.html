@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>B-CPR Admin | JIA TRAINER CENTER</title>
+<title>ระบบจองคอร์ส Admin | JIA TRAINER CENTER</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
 :root{
@@ -63,8 +63,8 @@ tr:hover td{background:#FBFCFE}
 </head>
 <body>
 <div class="topbar"><div class="container">
-  <div><b>B-CPR ระบบหลังบ้าน</b> <span class="tag">Admin</span> <span class="tag" id="actorTag" style="display:none;background:#fff;color:var(--navy)"></span></div>
-  <div><a href="bcpr.html" style="color:#fff;opacity:.85">← หน้าคอร์ส</a>&nbsp;&nbsp;<button class="btn-line btn-sm" id="btnLogout" style="color:#fff;border-color:rgba(255,255,255,.4);display:none" onclick="logout()">ออกจากระบบ</button></div>
+  <div><b>ระบบจองคอร์สอบรม ระบบหลังบ้าน</b> <span class="tag">Admin</span> <span class="tag" id="actorTag" style="display:none;background:#fff;color:var(--navy)"></span></div>
+  <div><a href="index.html" style="color:#fff;opacity:.85">← หน้าแรก</a>&nbsp;&nbsp;<button class="btn-line btn-sm" id="btnLogout" style="color:#fff;border-color:rgba(255,255,255,.4);display:none" onclick="logout()">ออกจากระบบ</button></div>
 </div></div>
 
 <div class="container">
@@ -87,6 +87,7 @@ tr:hover td{background:#FBFCFE}
     <button id="tab-classes" class="active" onclick="showTab('classes')">📅 รอบอบรม</button>
     <button id="tab-bookings" onclick="showTab('bookings')">🎟️ การจอง</button>
     <button id="tab-certs" onclick="showTab('certs')">📜 ใบเซอร์</button>
+    <button id="tab-courses" onclick="showTab('courses')">🏷️ คอร์ส</button>
     <button id="tab-audit" onclick="showTab('audit')">📋 ประวัติการใช้งาน</button>
     <button id="tab-help" onclick="showTab('help')">📖 วิธีใช้งาน</button>
   </div>
@@ -96,6 +97,7 @@ tr:hover td{background:#FBFCFE}
     <div class="card">
       <h3>เปิดรอบอบรมใหม่</h3>
       <div class="grid c4">
+        <div><label>คอร์ส</label><select id="clCourse"></select></div>
         <div><label>วันที่</label><input type="date" id="clDate"></div>
         <div><label>เวลา</label><select id="clSlot"><option>09:00-12:00</option><option>13:00-16:00</option><option>17:00-20:00</option></select></div>
         <div><label>รับสูงสุด (คน)</label><input type="number" id="clMax" value="20" min="1" max="200"></div>
@@ -107,7 +109,7 @@ tr:hover td{background:#FBFCFE}
     <div class="card">
       <h3>รอบอบรมทั้งหมด</h3>
       <div style="overflow-x:auto"><table id="tblClasses"><thead><tr>
-        <th>วันที่</th><th>เวลา</th><th>จอง/รับ</th><th>สถานะ</th><th>สถานที่</th><th>หมายเหตุ</th><th>จัดการ</th>
+        <th>คอร์ส</th><th>วันที่</th><th>เวลา</th><th>จอง/รับ</th><th>สถานะ</th><th>สถานที่</th><th>หมายเหตุ</th><th>จัดการ</th>
       </tr></thead><tbody></tbody></table></div>
     </div>
   </div>
@@ -117,12 +119,12 @@ tr:hover td{background:#FBFCFE}
     <div class="card">
       <h3>ลงจองแทนลูกค้า <span class="muted">(จองผ่านเซลล์ / โทรศัพท์ / หน้างาน)</span></h3>
       <div class="grid c4" style="margin-top:6px">
-        <div style="grid-column:1/-1"><label>รอบเรียน</label><select id="mbClass"><option value="">— เลือกรอบเรียน —</option></select></div>
+        <div style="grid-column:1/-1"><label>รอบเรียน</label><select id="mbClass" onchange="mbSuggestPrice()"><option value="">— เลือกรอบเรียน —</option></select></div>
         <div><label>ชื่อผู้จอง</label><input id="mbName" placeholder="ชื่อ-นามสกุล / บริษัท"></div>
         <div><label>เบอร์โทร</label><input id="mbTel" placeholder="08x-xxx-xxxx"></div>
         <div><label>อีเมล (ไม่บังคับ)</label><input id="mbEmail" type="email"></div>
-        <div><label>จำนวนคน</label><input id="mbPeople" type="number" value="1" min="1" max="100"></div>
-        <div><label>ยอดรวม (บาท)</label><input id="mbPrice" type="number" min="0" placeholder="เว้นว่าง = ราคาคอร์ส × คน"><span class="muted">กรอกเฉพาะกรณีส่วนลด/ราคาพิเศษ</span></div>
+        <div><label>จำนวนคน</label><input id="mbPeople" type="number" value="1" min="1" max="100" oninput="mbSuggestPrice()"></div>
+        <div><label>ยอดรวม (บาท)</label><input id="mbPrice" type="number" min="0" value="0"><span class="muted">แก้ไขได้ กรณีมีส่วนลด/ราคาพิเศษ</span></div>
         <div><label>ช่องทางชำระ</label><select id="mbPayMode"><option>โอนเงิน</option><option>เงินสด</option><option>PromptPay</option><option>ใบแจ้งหนี้</option><option>อื่นๆ</option></select></div>
         <div><label>สถานะการชำระ</label><select id="mbStatus"><option value="ชำระแล้ว">ชำระแล้ว</option><option value="รอตรวจสอบ">รอตรวจสอบ (ยังไม่ได้เงิน)</option></select></div>
       </div>
@@ -131,8 +133,9 @@ tr:hover td{background:#FBFCFE}
       <div style="margin-top:12px"><button class="btn-gold" onclick="manualBooking()">+ บันทึกการจอง</button></div>
     </div>
     <div class="card">
-      <h3>รายการจอง <span class="muted">(เว็บ B-CPR + แอดมินลงเอง)</span></h3>
+      <h3>รายการจอง <span class="muted">(ทุกคอร์สที่จองออนไลน์ + แอดมินลงเอง)</span></h3>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select id="bkCourseFilter" style="max-width:260px" onchange="loadBookings()"></select>
         <select id="bkFilter" style="max-width:220px" onchange="loadBookings()">
           <option value="">ทุกสถานะ</option>
           <option value="รอตรวจสอบ">รอตรวจสอบ</option>
@@ -142,7 +145,7 @@ tr:hover td{background:#FBFCFE}
         <button class="btn-line" onclick="loadBookings()">รีเฟรช</button>
       </div>
       <div style="overflow-x:auto"><table id="tblBookings"><thead><tr>
-        <th>วันที่จอง</th><th>ชื่อ</th><th>จองโดย</th><th>ติดต่อ</th><th>รอบเรียน</th><th>คน</th><th>ยอด</th><th>สถานะ</th><th>เช็คชื่อ</th><th>จัดการ</th>
+        <th>วันที่จอง</th><th>คอร์ส</th><th>ชื่อ</th><th>จองโดย</th><th>ติดต่อ</th><th>รอบเรียน</th><th>คน</th><th>ยอด</th><th>สถานะ</th><th>เช็คชื่อ</th><th>จัดการ</th>
       </tr></thead><tbody></tbody></table></div>
     </div>
   </div>
@@ -151,8 +154,23 @@ tr:hover td{background:#FBFCFE}
   <div id="view-certs" style="display:none">
     <div class="card">
       <h3>ใบเซอร์ที่ออกแล้ว</h3>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select id="ctCourseFilter" style="max-width:260px" onchange="loadCerts()"></select>
+        <button class="btn-line" onclick="loadCerts()">รีเฟรช</button>
+      </div>
       <div style="overflow-x:auto"><table id="tblCerts"><thead><tr>
-        <th>เลขที่</th><th>ชื่อผู้ผ่านอบรม</th><th>วันออก</th><th>หมดอายุ</th><th>สถานะ</th><th>จัดการ</th>
+        <th>เลขที่</th><th>คอร์ส</th><th>ชื่อผู้ผ่านอบรม</th><th>วันออก</th><th>หมดอายุ</th><th>สถานะ</th><th>จัดการ</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- courses -->
+  <div id="view-courses" style="display:none">
+    <div class="card">
+      <h3>คอร์สที่เปิดจองออนไลน์</h3>
+      <p class="muted">แก้ราคา / เปิด-ปิดจอง / จำนวนรับต่อรอบ ของแต่ละคอร์สได้ที่นี่ — เพิ่มคอร์สใหม่ให้ติดต่อผู้ดูแลระบบ</p>
+      <div style="overflow-x:auto;margin-top:10px"><table id="tblCourses"><thead><tr>
+        <th>คอร์ส</th><th>ราคา/ท่าน</th><th>รับสูงสุด/รอบ</th><th>สถานะจอง</th><th>จัดการ</th>
       </tr></thead><tbody></tbody></table></div>
     </div>
   </div>
@@ -173,17 +191,18 @@ tr:hover td{background:#FBFCFE}
     <div class="card">
       <h3>ขั้นตอนการทำงานประจำวัน</h3>
       <ol style="margin:10px 0 0 20px;line-height:1.9">
-        <li><b>เปิดรอบอบรม</b> — แท็บ 📅 รอบอบรม → กรอกวันที่/เวลา/จำนวนรับ → กด <span class="chip ref">+ เปิดรอบนี้</span> ลูกค้าจะเห็นและจองได้ทันที</li>
-        <li><b>ตรวจสลิปและอนุมัติ</b> — แท็บ 🎟️ การจอง → กรองสถานะ <span class="chip ref">รอตรวจสอบ</span> → กด <span class="chip ref">ดูสลิป</span> เทียบยอดให้ตรง (600 บาท × จำนวนคน) → กด <span class="chip ref">อนุมัติ</span> หรือ <span class="chip ref">ปฏิเสธ</span></li>
-        <li><b>ลงจองแทนลูกค้า (จองผ่านเซลล์/โทร/หน้างาน)</b> — แท็บ 🎟️ การจอง → ฟอร์ม <span class="chip ref">ลงจองแทนลูกค้า</span> ด้านบน → เลือกรอบ กรอกชื่อ-เบอร์-จำนวนคน ปรับยอดได้กรณีราคาพิเศษ → เลือกสถานะ <span class="chip ref">ชำระแล้ว</span> ถ้าได้รับเงินแล้ว หรือ <span class="chip ref">รอตรวจสอบ</span> ถ้ายังไม่ได้เงิน รายการจะติดป้าย "แอดมิน/เซลล์" ระบุชื่อผู้ลงจองในคอลัมน์ "จองโดย" (ดึงจากชื่อที่กรอกตอนล็อกอิน) และตัดที่นั่งจากรอบเดียวกับการจองหน้าเว็บ</li>
-        <li><b>ตรวจสอบย้อนหลัง</b> — แท็บ 📋 ประวัติการใช้งาน แสดงทุกรายการที่มีการเปลี่ยนแปลง (ลงจอง/อนุมัติ/ปฏิเสธ/เช็คชื่อ/ออกใบเซอร์/เปิด-แก้รอบอบรม) พร้อมชื่อผู้ทำรายการและเวลา</li>
+        <li><b>เปิดรอบอบรม</b> — แท็บ 📅 รอบอบรม → เลือกคอร์ส/วันที่/เวลา/จำนวนรับ → กด <span class="chip ref">+ เปิดรอบนี้</span> ลูกค้าจะเห็นและจองได้ทันที</li>
+        <li><b>ตรวจสลิปและอนุมัติ</b> — แท็บ 🎟️ การจอง → กรองคอร์ส/สถานะ <span class="chip ref">รอตรวจสอบ</span> → กด <span class="chip ref">ดูสลิป</span> เทียบยอดให้ตรงกับราคาคอร์ส × จำนวนคน → กด <span class="chip ref">อนุมัติ</span> หรือ <span class="chip ref">ปฏิเสธ</span></li>
+        <li><b>ลงจองแทนลูกค้า (จองผ่านเซลล์/โทร/หน้างาน)</b> — แท็บ 🎟️ การจอง → ฟอร์ม <span class="chip ref">ลงจองแทนลูกค้า</span> ด้านบน → เลือกรอบ กรอกชื่อ-เบอร์-จำนวนคน (ยอดเงินคำนวณราคาคอร์สให้อัตโนมัติ ปรับได้กรณีราคาพิเศษ) → เลือกสถานะ <span class="chip ref">ชำระแล้ว</span> ถ้าได้รับเงินแล้ว หรือ <span class="chip ref">รอตรวจสอบ</span> ถ้ายังไม่ได้เงิน รายการจะติดป้าย "แอดมิน/เซลล์" ระบุชื่อผู้ลงจองในคอลัมน์ "จองโดย" (ดึงจากชื่อที่กรอกตอนล็อกอิน) และตัดที่นั่งจากรอบเดียวกับการจองหน้าเว็บ</li>
         <li><b>เช็คชื่อวันอบรม</b> — แท็บ 🎟️ การจอง → กด <span class="chip ref">เช็คชื่อ</span> ให้รายการที่ลูกค้ามาเข้าเรียนจริง</li>
         <li><b>ออกใบเซอร์</b> — ออกได้เฉพาะรายการที่ <span class="chip ref">ชำระแล้ว</span> → กด <span class="chip ref">ออกใบเซอร์</span> → พิมพ์ชื่อผู้ผ่านอบรม 1 คน/บรรทัด (ใบเซอร์มีอายุ 2 ปีอัตโนมัติ)</li>
+        <li><b>แก้ราคา/เปิดปิดจองคอร์ส</b> — แท็บ 🏷️ คอร์ส → กด <span class="chip ref">แก้ไข</span> เพื่อเปลี่ยนราคา จำนวนรับต่อรอบ หรือปิดรับจองชั่วคราว</li>
+        <li><b>ตรวจสอบย้อนหลัง</b> — แท็บ 📋 ประวัติการใช้งาน แสดงทุกรายการที่มีการเปลี่ยนแปลง (ลงจอง/อนุมัติ/ปฏิเสธ/เช็คชื่อ/ออกใบเซอร์/เปิด-แก้รอบอบรม) พร้อมชื่อผู้ทำรายการและเวลา</li>
       </ol>
     </div>
     <div class="card">
       <h3>คำถามที่พบบ่อย</h3>
-      <p style="margin-top:8px"><b>หน้าจองของลูกค้าว่างเปล่า</b> — ยังไม่ได้เปิดรอบอบรมเลย ไปแท็บ 📅 รอบอบรม แล้วเปิดรอบใหม่</p>
+      <p style="margin-top:8px"><b>หน้าจองของลูกค้าว่างเปล่า</b> — ยังไม่ได้เปิดรอบอบรมของคอร์สนั้นเลย ไปแท็บ 📅 รอบอบรม แล้วเปิดรอบใหม่</p>
       <p style="margin-top:10px"><b>ลูกค้าโอนเงินผิดยอด</b> — อย่าเพิ่งกดอนุมัติ ทักไปสอบถามลูกค้าทาง LINE @jiacpr ก่อนเสมอ</p>
       <p style="margin-top:10px"><b>กดออกใบเซอร์ไม่ได้</b> — ต้องเป็นรายการที่สถานะ <span class="chip ref">ชำระแล้ว</span> เท่านั้น</p>
       <p style="margin-top:10px"><b>จะรู้ได้อย่างไรว่ามีลูกค้าจองเข้ามา</b> — ระบบส่งข้อความ LINE แจ้งทีมงานทุกคนอัตโนมัติทันทีที่มีการจองใหม่ (ทั้งจองจากหน้าเว็บและที่แอดมิน/เซลล์ลงเอง) ไม่ต้องคอยเปิดหน้านี้เช็ค และดูรายการทั้งหมดย้อนหลังได้ที่แท็บ 🎟️ การจอง</p>
@@ -216,6 +235,25 @@ tr:hover td{background:#FBFCFE}
   </div>
 </div>
 
+<!-- edit course modal -->
+<div class="modal-bg" id="courseModal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <h3 style="color:var(--navy)" id="courseModalTitle">แก้ไขคอร์ส</h3>
+    <div style="margin-top:10px"><label>ราคา/ท่าน (บาท)</label><input type="number" id="ceCoursePrice" min="0"></div>
+    <div style="margin-top:10px"><label>รับสูงสุดต่อรอบ (คน)</label><input type="number" id="ceCourseMax" min="1" max="200"></div>
+    <div style="margin-top:10px"><label>รายละเอียดคอร์ส</label><textarea id="ceCourseDesc" rows="3"></textarea></div>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="ceCourseOnline" style="width:auto">
+      <label style="margin:0">เปิดให้จองออนไลน์</label>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn-line" onclick="document.getElementById('courseModal').classList.remove('show')">ยกเลิก</button>
+      <button class="btn-gold" onclick="saveCourse()">บันทึก</button>
+    </div>
+    <div id="courseEditResult" style="margin-top:12px"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -224,6 +262,9 @@ const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const THDAY=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
 const THMON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 let certBookingId = null;
+let courses = []; // managed courses (cert_prefix is not null) — loaded once per session
+let courseEditKey = null;
+let allClasses = []; // cache from admin_list_classes for the manual-booking price lookup
 
 function thDate(iso){ if(!iso) return '-'; const d=new Date(iso+(iso.length<=10?'T00:00:00':''));
   return `${THDAY[d.getDay()]} ${d.getDate()} ${THMON[d.getMonth()]} ${d.getFullYear()+543}`; }
@@ -264,38 +305,93 @@ function logout(){
   document.getElementById('btnLogout').style.display='none';
   document.getElementById('loginMsg').textContent='';
 }
-function enterApp(){
+async function enterApp(){
   document.getElementById('loginView').style.display='none';
   document.getElementById('appView').style.display='block';
   document.getElementById('btnLogout').style.display='inline-block';
   document.getElementById('actorTag').textContent = sessionStorage.getItem('bcprActorName') || '';
   document.getElementById('actorTag').style.display = 'inline-block';
+  await loadCourses();
   loadClasses(); loadBookings(); loadCerts();
 }
 function showTab(name){
-  for(const t of ['classes','bookings','certs','audit','help']){
+  for(const t of ['classes','bookings','certs','courses','audit','help']){
     document.getElementById('view-'+t).style.display = t===name?'block':'none';
     document.getElementById('tab-'+t).classList.toggle('active', t===name);
   }
   if(name==='audit') loadAuditLog();
 }
 
+/* ---------- courses ---------- */
+async function loadCourses(){
+  const r = await api('admin_list_courses');
+  if(!r.ok) return toast('โหลดรายชื่อคอร์สไม่สำเร็จ');
+  courses = r.courses;
+
+  const clSel = document.getElementById('clCourse');
+  clSel.innerHTML = courses.map(c=>`<option value="${esc(c.key)}">${esc(c.label)}</option>`).join('');
+
+  const filterOpts = '<option value="">ทุกคอร์ส</option>' + courses.map(c=>`<option value="${esc(c.key)}">${esc(c.label)}</option>`).join('');
+  document.getElementById('bkCourseFilter').innerHTML = filterOpts;
+  document.getElementById('ctCourseFilter').innerHTML = filterOpts;
+
+  renderCourses();
+}
+function renderCourses(){
+  document.querySelector('#tblCourses tbody').innerHTML = courses.map(c=>`<tr>
+    <td><b>${esc(c.label)}</b><br><span class="muted">${esc(c.key)}</span></td>
+    <td>${Number(c.price).toLocaleString()} ฿</td>
+    <td>${c.max_students}</td>
+    <td>${c.online_booking?'<span class="chip ready">เปิดจอง</span>':'<span class="chip off">ปิดจอง</span>'}</td>
+    <td class="actions"><button class="btn-line btn-sm" onclick="openCourseEdit('${esc(c.key)}')">แก้ไข</button></td>
+    </tr>`).join('') || '<tr><td colspan="5" class="muted">ยังไม่มีคอร์สที่เปิดจองออนไลน์</td></tr>';
+}
+function openCourseEdit(key){
+  const c = courses.find(x=>x.key===key);
+  if(!c) return;
+  courseEditKey = key;
+  document.getElementById('courseModalTitle').textContent = 'แก้ไขคอร์ส — ' + c.label;
+  document.getElementById('ceCoursePrice').value = c.price;
+  document.getElementById('ceCourseMax').value = c.max_students;
+  document.getElementById('ceCourseDesc').value = c.description || '';
+  document.getElementById('ceCourseOnline').checked = !!c.online_booking;
+  document.getElementById('courseEditResult').innerHTML = '';
+  document.getElementById('courseModal').classList.add('show');
+}
+async function saveCourse(){
+  const patch = {
+    price: parseFloat(document.getElementById('ceCoursePrice').value),
+    max_students: parseInt(document.getElementById('ceCourseMax').value,10),
+    description: document.getElementById('ceCourseDesc').value.trim(),
+    online_booking: document.getElementById('ceCourseOnline').checked,
+  };
+  const r = await api('admin_update_course', {key: courseEditKey, patch});
+  if(!r.ok){ document.getElementById('courseEditResult').innerHTML = '<p style="color:var(--bad)">ผิดพลาด: '+esc(r.error)+'</p>'; return; }
+  toast('บันทึกแล้ว');
+  document.getElementById('courseModal').classList.remove('show');
+  await loadCourses();
+}
+
 /* ---------- classes ---------- */
 async function loadClasses(){
   const r = await api('admin_list_classes');
   if(!r.ok) return toast('โหลดรอบอบรมไม่สำเร็จ');
+  allClasses = r.classes;
+
   const today = new Date().toISOString().slice(0,10);
   const open = r.classes.filter(c=>c.status==='ready' && c.date>=today);
   const cur = document.getElementById('mbClass').value;
   document.getElementById('mbClass').innerHTML = '<option value="">— เลือกรอบเรียน —</option>' +
-    open.map(c=>`<option value="${esc(c.id)}">${esc(c.course_key||c.course_name||'')} — ${thDate(c.date)} ${esc(c.time_slot)} (จองแล้ว ${c.booked}/${c.max_students})</option>`).join('');
+    open.map(c=>`<option value="${esc(c.id)}">${esc(c.course_name||c.course_key)} — ${thDate(c.date)} ${esc(c.time_slot)} (จองแล้ว ${c.booked}/${c.max_students})</option>`).join('');
   if(cur) document.getElementById('mbClass').value = cur;
+
   const chip = s => s==='ready'?'<span class="chip ready">เปิดรับ</span>'
     : s==='cancelled'?'<span class="chip off">ปิด/ยกเลิก</span>'
     : s==='full'?'<span class="chip wait">เต็ม</span>'
     : s==='completed'?'<span class="chip done">จบแล้ว</span>'
     : '<span class="chip wait">'+esc(s)+'</span>';
   document.querySelector('#tblClasses tbody').innerHTML = r.classes.map(c=>`<tr>
+    <td><b>${esc(c.course_name||c.course_key)}</b></td>
     <td>${thDate(c.date)}</td><td>${esc(c.time_slot)}</td>
     <td><b>${c.booked}</b>/${c.max_students}</td>
     <td>${chip(c.status)}</td><td>${esc(c.place)}</td><td>${esc(c.note)}</td>
@@ -303,11 +399,12 @@ async function loadClasses(){
       ${c.status==='ready'?`<button class="btn-bad btn-sm" onclick="setClassStatus('${c.id}','cancelled')">ปิดรับ</button>`:''}
       ${c.status==='cancelled'?`<button class="btn-ok btn-sm" onclick="setClassStatus('${c.id}','ready')">เปิดรับ</button>`:''}
       ${c.status==='ready'?`<button class="btn-line btn-sm" onclick="setClassStatus('${c.id}','completed')">จบรอบ</button>`:''}
-    </td></tr>`).join('') || '<tr><td colspan="7" class="muted">ยังไม่มีรอบอบรม</td></tr>';
+    </td></tr>`).join('') || '<tr><td colspan="8" class="muted">ยังไม่มีรอบอบรม</td></tr>';
 }
 async function createClass(){
   const date = document.getElementById('clDate').value;
-  const body = { date, time_slot: document.getElementById('clSlot').value,
+  const body = { course_key: document.getElementById('clCourse').value,
+    date, time_slot: document.getElementById('clSlot').value,
     max_students: parseInt(document.getElementById('clMax').value,10),
     place: document.getElementById('clPlace').value, note: document.getElementById('clNote').value };
   if(!date) return toast('กรุณาเลือกวันที่');
@@ -323,6 +420,14 @@ async function setClassStatus(id, status){
 }
 
 /* ---------- bookings ---------- */
+function mbSuggestPrice(){
+  const classId = document.getElementById('mbClass').value;
+  const p = parseInt(document.getElementById('mbPeople').value,10);
+  const cls = allClasses.find(c=>c.id===classId);
+  const course = cls ? courses.find(c=>c.key===cls.course_key) : null;
+  const perPerson = course ? Number(course.price) : 0;
+  if(Number.isInteger(p) && p>0) document.getElementById('mbPrice').value = p*perPerson;
+}
 async function manualBooking(){
   const body = {
     class_id: document.getElementById('mbClass').value,
@@ -347,21 +452,27 @@ async function manualBooking(){
     return toast('ผิดพลาด: '+(r.error||''));
   }
   toast('บันทึกการจองแล้ว (เลขที่ '+r.booking_id+')');
-  for(const id of ['mbName','mbTel','mbEmail','mbNote','mbPrice']) document.getElementById(id).value='';
-  document.getElementById('mbPeople').value=1;
+  for(const id of ['mbName','mbTel','mbEmail','mbNote']) document.getElementById(id).value='';
+  document.getElementById('mbPeople').value=1; mbSuggestPrice();
   document.getElementById('mbPdpa').checked=false;
   loadBookings(); loadClasses();
 }
 async function loadBookings(){
   const f = document.getElementById('bkFilter').value;
-  const r = await api('admin_list_bookings', f?{payment_status:f}:{});
+  const courseKey = document.getElementById('bkCourseFilter').value;
+  const body = {};
+  if(f) body.payment_status = f;
+  if(courseKey) body.course_key = courseKey;
+  const r = await api('admin_list_bookings', body);
   if(!r.ok) return toast('โหลดการจองไม่สำเร็จ');
   const chip = s => s==='ชำระแล้ว'?'<span class="chip paid">ชำระแล้ว</span>'
     : s==='รอตรวจสอบ'?'<span class="chip wait">รอตรวจสอบ</span>'
     : '<span class="chip off">'+esc(s)+'</span>';
+  const isManual = ch => ch==='bcpr-admin' || ch==='class-admin';
   document.querySelector('#tblBookings tbody').innerHTML = r.bookings.map(b=>`<tr>
     <td class="muted">${thDateTime(b.created_at)}</td>
-    <td><b>${esc(b.name)}</b>${b.channel==='class-admin'?'<br><span class="chip done">แอดมิน/เซลล์'+(b.payment_mode&&b.payment_mode!=='promptpay'?' · '+esc(b.payment_mode):'')+'</span>':''}</td>
+    <td>${esc(b.course_name||b.course_type)}</td>
+    <td><b>${esc(b.name)}</b>${isManual(b.channel)?'<br><span class="chip done">แอดมิน/เซลล์'+(b.payment_mode&&b.payment_mode!=='promptpay'?' · '+esc(b.payment_mode):'')+'</span>':''}</td>
     <td>${b.sales_staff?esc(b.sales_staff):'<span class="muted">—</span>'}</td>
     <td>${esc(b.tel)}${b.email?'<br><span class="muted">'+esc(b.email)+'</span>':''}</td>
     <td>${thDate(b.start_date)}<br><span class="muted">${esc(b.time_slot)}</span></td>
@@ -374,7 +485,7 @@ async function loadBookings(){
       ${b.payment_status==='รอตรวจสอบ'?`<button class="btn-ok btn-sm" onclick="setBooking('${b.id}','ชำระแล้ว')">อนุมัติ</button>
       <button class="btn-bad btn-sm" onclick="setBooking('${b.id}','ยกเลิก')">ปฏิเสธ</button>`:''}
       ${b.payment_status==='ชำระแล้ว'?`<button class="btn-gold btn-sm" onclick="openCertModal('${b.id}', ${b.total_people}, '${esc(b.name).replace(/'/g,"\\'")}')">ออกใบเซอร์</button>`:''}
-    </td></tr>`).join('') || '<tr><td colspan="10" class="muted">ยังไม่มีการจอง</td></tr>';
+    </td></tr>`).join('') || '<tr><td colspan="11" class="muted">ยังไม่มีการจอง</td></tr>';
 }
 async function setBooking(id, status){
   const msg = status==='ชำระแล้ว' ? 'ยืนยันว่าได้รับชำระเงินแล้ว?' : 'ปฏิเสธการจองนี้? (ที่นั่งจะถูกคืน)';
@@ -412,16 +523,18 @@ async function issueCerts(){
   loadCerts();
 }
 async function loadCerts(){
-  const r = await api('admin_list_certs');
+  const courseKey = document.getElementById('ctCourseFilter').value;
+  const r = await api('admin_list_certs', courseKey?{course_key:courseKey}:{});
   if(!r.ok) return;
+  const labelOf = kind => (courses.find(c=>c.key===kind)||{}).label || kind;
   document.querySelector('#tblCerts tbody').innerHTML = r.certificates.map(c=>`<tr>
-    <td><b>${c.code}</b></td><td>${esc(c.learner_name)}</td>
+    <td><b>${c.code}</b></td><td>${esc(labelOf(c.kind))}</td><td>${esc(c.learner_name)}</td>
     <td>${thDate(c.issued_at)}</td><td>${thDate(c.expires_at)}</td>
     <td>${c.revoked_at?'<span class="chip off">เพิกถอน</span>':'<span class="chip paid">ใช้งานได้</span>'}</td>
     <td class="actions">
       <a class="btn-line btn-sm" style="display:inline-block" href="bcpr-cert.html?code=${c.code}&print=1" target="_blank">พิมพ์</a>
       ${c.revoked_at?'':`<button class="btn-bad btn-sm" onclick="revokeCert('${c.code}')">เพิกถอน</button>`}
-    </td></tr>`).join('') || '<tr><td colspan="6" class="muted">ยังไม่มีใบเซอร์</td></tr>';
+    </td></tr>`).join('') || '<tr><td colspan="7" class="muted">ยังไม่มีใบเซอร์</td></tr>';
 }
 async function revokeCert(code){
   if(!confirm('เพิกถอนใบเซอร์ '+code+' ?')) return;
