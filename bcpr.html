@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>หลักสูตร B-CPR การช่วยชีวิตขั้นพื้นฐานสำหรับประชาชน | JIA TRAINER CENTER</title>
+<meta name="description" content="หลักสูตร B-CPR การกู้ชีพขั้นพื้นฐาน (สพฉ.) — CPR, AED, การช่วยผู้สำลัก อบรม 3 ชั่วโมง 600 บาท/ท่าน พร้อมใบรับรอง จองผ่าน LINE @jiacpr หรือจองออนไลน์">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+:root{
+  --navy:#1A2B5C; --navy-dark:#0E1A3E; --navy-grad:linear-gradient(135deg,#1A2B5C 0%,#0E1A3E 100%);
+  --gold:#F5C518; --gold-dark:#D4A50F; --ink:#22304F;
+  --bg:#F6F8FC; --card:#fff; --line:#E3E8F2;
+  --ok:#2E7D32; --warn:#B26A00; --bad:#C62828;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun',sans-serif;color:var(--ink);background:#fff;line-height:1.7}
+a{color:var(--navy);text-decoration:none}
+a:hover{text-decoration:underline}
+.container{max-width:960px;margin:0 auto;padding:0 20px}
+
+.topnav{background:var(--navy-dark);color:#fff;padding:10px 0;font-size:.9em}
+.topnav .container{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.topnav a{color:#fff;opacity:.85}
+
+/* Hero */
+.hero{background:var(--navy-grad);color:#fff;padding:56px 20px 48px;text-align:center;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;right:-80px;top:-80px;width:300px;height:300px;border-radius:50%;background:rgba(245,197,24,.08)}
+.hero .course-type{display:inline-block;background:var(--gold);color:var(--navy);padding:4px 20px;border-radius:20px;font-size:.9em;font-weight:700;margin-bottom:18px}
+.hero h1{font-size:2.1em;line-height:1.3;margin-bottom:8px}
+.hero h1 .hl{color:var(--gold)}
+.hero .subtitle{font-size:1.15em;opacity:.92;margin-bottom:14px}
+.hero .desc{max-width:680px;margin:0 auto;font-size:.98em;opacity:.85}
+.badges{display:flex;justify-content:center;gap:10px;margin-top:22px;flex-wrap:wrap}
+.badge{padding:7px 18px;border-radius:6px;font-weight:600;font-size:.88em;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25)}
+.badge.gold{background:var(--gold);color:var(--navy);border:none}
+.cta-row{display:flex;justify-content:center;gap:12px;margin-top:26px;flex-wrap:wrap}
+.btn{display:inline-block;border-radius:10px;padding:13px 28px;font-size:1.05em;font-weight:700;text-decoration:none !important;transition:.15s}
+.btn-line{background:#06C755;color:#fff}
+.btn-line:hover{filter:brightness(1.06)}
+.btn-gold{background:var(--gold);color:var(--navy)}
+.btn-gold:hover{background:var(--gold-dark)}
+.btn-ghost{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.6)}
+.btn-ghost:hover{border-color:#fff}
+
+/* Highlights */
+.high{background:var(--bg);padding:38px 0}
+.high .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.hcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;text-align:center}
+.hcard .ic{font-size:2em}
+.hcard b{display:block;color:var(--navy);font-size:1.1em;margin:6px 0 4px}
+.hcard p{font-size:.92em;color:#5B6B90}
+
+/* Sections */
+.section{margin:38px 0}
+.section-title{background:var(--navy);color:#fff;padding:10px 18px;font-size:1.15em;font-weight:700;border-radius:8px 8px 0 0}
+.section-title small{opacity:.75;font-weight:400}
+.section-body{padding:20px;background:#fff;border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px}
+.learn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.learn{border:1px solid var(--line);border-radius:12px;padding:18px}
+.learn b{color:var(--navy);display:block;margin-bottom:6px;font-size:1.05em}
+.learn ul{margin-left:18px;font-size:.93em}
+.learn ul li{margin:3px 0}
+.note-line{font-size:.88em;color:#5B6B90;margin-top:14px}
+
+/* Upcoming dates */
+.dates-grid{display:grid;gap:10px}
+.date-item{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.date-item .d{flex:1}
+.date-item .d b{color:var(--navy)}
+.seats{font-size:.8em;font-weight:700;padding:3px 10px;border-radius:12px;background:#E5F2E6;color:var(--ok);white-space:nowrap}
+.seats.low{background:#FFF3DF;color:var(--warn)}
+.seats.none{background:#FBE5E5;color:var(--bad)}
+.btn-book{background:var(--gold);color:var(--navy);font-weight:700;border-radius:8px;padding:8px 18px;font-size:.9em;text-decoration:none !important;white-space:nowrap}
+
+/* Pricing */
+.pricing{border:2px solid var(--gold);border-radius:16px;padding:28px;text-align:center;background:linear-gradient(180deg,#FFFDF4 0%,#fff 100%)}
+.pricing .amount{font-size:2.6em;font-weight:700;color:var(--navy)}
+.pricing .amount small{font-size:.4em;font-weight:400;color:#5B6B90}
+.pricing ul{list-style:none;margin:14px 0;font-size:.95em}
+.pricing ul li{margin:5px 0}
+.pricing ul li::before{content:'✔ ';color:var(--ok);font-weight:700}
+
+/* Accreditation */
+.accr{background:var(--navy-grad);color:#fff;border-radius:16px;padding:26px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.accr .seal{font-size:2.6em;background:rgba(255,255,255,.1);border-radius:50%;width:76px;height:76px;display:flex;align-items:center;justify-content:center;flex:none}
+.accr b{color:var(--gold)}
+.accr p{font-size:.95em;opacity:.92}
+
+/* FAQ */
+.faq-item{border-bottom:1px solid var(--line);padding:12px 0}
+.faq-item:last-child{border-bottom:none}
+.faq-item b{color:var(--navy);display:block;margin-bottom:2px}
+.faq-item p{font-size:.93em;color:#44507a}
+
+/* CTA + footer */
+.cta{background:var(--navy-grad);color:#fff;text-align:center;padding:38px 20px;border-radius:16px;margin:38px 0}
+.cta h3{font-size:1.5em;margin-bottom:8px}
+.cta .phone{font-size:1.2em;font-weight:700;color:var(--gold);margin:6px 0}
+.cta .channels{font-size:.92em;opacity:.85;margin-bottom:18px}
+.disclaimer{font-size:.8em;color:#98A3BD;margin:20px 0}
+.footer{background:var(--navy-dark);color:#B9C3DC;text-align:center;padding:26px 16px;font-size:.9em;line-height:1.8}
+.footer a{color:var(--gold)}
+@media(max-width:600px){.hero h1{font-size:1.6em}}
+</style>
+</head>
+<body>
+
+<div class="topnav"><div class="container">
+  <span><b>JIA TRAINER CENTER</b> | บริษัท เจี่ยรักษา จำกัด</span>
+  <span><a href="index.html">← หลักสูตรทั้งหมด</a></span>
+</div></div>
+
+<div class="hero">
+  <span class="course-type">เปิดอบรมเร็ว ๆ นี้ · หลักสูตรมาตรฐาน สพฉ.</span>
+  <h1>หลักสูตร <span class="hl">B-CPR</span><br>การช่วยชีวิตขั้นพื้นฐานสำหรับประชาชน</h1>
+  <p class="subtitle">ฝึกจริง • ช่วยเป็น • พร้อมรับมือเหตุฉุกเฉิน</p>
+  <p class="desc">หลักสูตรการกู้ชีพขั้นพื้นฐาน (Basic Cardiopulmonary Resuscitation: B-CPR)
+    ตามประกาศสถาบันการแพทย์ฉุกเฉินแห่งชาติ — เรียนรู้ CPR, การใช้เครื่อง AED
+    และการช่วยผู้สำลัก ภายใน 3 ชั่วโมง พร้อมใบรับรองผู้ผ่านการฝึกอบรม</p>
+  <div class="badges">
+    <span class="badge gold">600 บาท/ท่าน</span>
+    <span class="badge">สพฉ. รับรอง ศูนย์ LC210002</span>
+    <span class="badge">อบรม 3 ชั่วโมง</span>
+    <span class="badge">ได้รับใบรับรอง (อายุ 2 ปี)</span>
+  </div>
+  <div class="cta-row">
+    <a class="btn btn-line" href="https://line.me/R/ti/p/@jiacpr">💬 จองผ่าน LINE @jiacpr</a>
+    <a class="btn btn-ghost" href="bcpr-booking.html">ดูรอบอบรม + จองออนไลน์</a>
+  </div>
+</div>
+
+<div class="high"><div class="container"><div class="grid">
+  <div class="hcard"><div class="ic">🫀</div><b>ฝึกจริง</b><p>ฝึกปั๊มหัวใจกับหุ่นมาตรฐานและเครื่อง AED Trainer ครูผู้สอน 1 คนต่อผู้เรียนไม่เกิน 8 คน</p></div>
+  <div class="hcard"><div class="ic">🤝</div><b>ช่วยเป็น</b><p>เรียนครบตั้งแต่ประเมินสถานการณ์ แจ้งเหตุ 1669 จนถึงการกู้ชีพและใช้ AED อย่างถูกขั้นตอน</p></div>
+  <div class="hcard"><div class="ic">🚨</div><b>พร้อมรับมือเหตุฉุกเฉิน</b><p>เป็น "พลเมืองผู้ช่วยชีวิต" (Citizen Responder) ที่ช่วยครอบครัวและชุมชนได้จริง</p></div>
+</div></div></div>
+
+<div class="container">
+
+<div class="section">
+  <div class="section-title">เนื้อหาหลักสูตร <small>· ตามโครงสร้างหลักสูตร สพฉ. รวม 3 ชั่วโมง</small></div>
+  <div class="section-body">
+    <div class="learn-grid">
+      <div class="learn"><b>🫀 CPR การกู้ชีพขั้นพื้นฐาน</b>
+        <ul><li>ห่วงโซ่การรอดชีวิต</li><li>การประเมินสถานการณ์และผู้ป่วยฉุกเฉิน</li><li>การแจ้งเหตุ 1669 และสิทธิ UCEP</li><li>ฝึกปฏิบัติกดหน้าอกอย่างมีคุณภาพ</li></ul>
+      </div>
+      <div class="learn"><b>⚡ AED เครื่องกระตุกหัวใจไฟฟ้า</b>
+        <ul><li>หลักการทำงานของเครื่อง AED</li><li>ขั้นตอนการใช้อย่างปลอดภัย</li><li>ฝึกปฏิบัติร่วมกับการทำ CPR</li></ul>
+      </div>
+      <div class="learn"><b>🧍 การช่วยผู้สำลัก</b>
+        <ul><li>การประเมินภาวะทางเดินหายใจอุดกั้น</li><li>วิธีช่วยเหลือผู้ใหญ่และเด็ก</li><li>ฝึกปฏิบัติท่าช่วยผู้สำลัก</li></ul>
+      </div>
+    </div>
+    <p class="note-line">รับผู้เรียนอายุ 7 ปีขึ้นไป · มีการทดสอบก่อน-หลังเรียน (Pre/Post Test) และประเมินการฝึกปฏิบัติตามเกณฑ์ สพฉ.</p>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">รอบอบรมที่เปิดรับสมัคร</div>
+  <div class="section-body" id="datesBody">
+    <p style="text-align:center">
+      <a class="btn btn-gold" href="bcpr-booking.html">ดูรอบอบรม + จองออนไลน์</a>
+    </p>
+  </div>
+</div>
+
+<div class="section">
+  <div class="pricing">
+    <div style="font-weight:700;color:var(--navy);font-size:1.1em">ค่าลงทะเบียนอบรม</div>
+    <div class="amount">600 <small>บาท/ท่าน</small></div>
+    <ul>
+      <li>อบรมเต็มหลักสูตร 3 ชั่วโมง (ทฤษฎี + ฝึกปฏิบัติ)</li>
+      <li>ใบรับรองผู้ผ่านการฝึกอบรม B-CPR (อายุ 2 ปี) ตรวจสอบออนไลน์ได้</li>
+      <li>อุปกรณ์ฝึกครบ: หุ่น CPR, AED Trainer</li>
+      <li>อัตราค่าลงทะเบียนตามประกาศ สพฉ.</li>
+    </ul>
+    <div class="cta-row" style="margin-top:8px">
+      <a class="btn btn-line" href="https://line.me/R/ti/p/@jiacpr">💬 จองผ่าน LINE</a>
+      <a class="btn btn-gold" href="bcpr-booking.html">จองออนไลน์</a>
+    </div>
+    <p class="note-line" style="margin-top:12px">จัดอบรมแบบองค์กร/หน่วยงาน (In-house) ได้ — สอบถามใบเสนอราคาทาง LINE @jiacpr</p>
+  </div>
+</div>
+
+<div class="section">
+  <div class="accr">
+    <div class="seal">🏅</div>
+    <div style="flex:1;min-width:240px">
+      <b>ศูนย์การเรียนรู้ชุมชนที่ได้รับการรับรองจาก สพฉ.</b>
+      <p>บริษัท เจี่ยรักษา จำกัด ได้รับการรับรองจากสถาบันการแพทย์ฉุกเฉินแห่งชาติ (สพฉ.)
+      เลขที่ศูนย์ <b>LC210002</b> จัดฝึกอบรมหลักสูตร B-CPR ตามมาตรฐานประกาศ สพฉ.
+      ผู้ผ่านการอบรมได้รับใบรับรองและสามารถเรียนต่อหลักสูตรที่สูงขึ้นได้</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">คำถามที่พบบ่อย</div>
+  <div class="section-body">
+    <div class="faq-item"><b>ใครเรียนได้บ้าง? ต้องมีพื้นฐานไหม?</b>
+      <p>ประชาชนทั่วไปอายุ 7 ปีขึ้นไป สุขภาพแข็งแรง ไม่ต้องมีพื้นฐานทางการแพทย์ใด ๆ</p></div>
+    <div class="faq-item"><b>ได้ใบรับรองไหม?</b>
+      <p>ผู้ที่เข้าอบรมครบและผ่านเกณฑ์การประเมิน (ปฏิบัติ ≥85% และ Post-test ≥85%) จะได้รับใบรับรองผู้ผ่านการฝึกอบรม B-CPR อายุ 2 ปี ตรวจสอบความถูกต้องออนไลน์ได้ทุกใบ</p></div>
+    <div class="faq-item"><b>สมัครและชำระเงินอย่างไร?</b>
+      <p>จองผ่าน LINE @jiacpr หรือจองออนไลน์: เลือกรอบ → โอนผ่าน PromptPay → แนบสลิป → เจ้าหน้าที่ยืนยันการจองภายใน 24 ชม. (ที่นั่งยืนยันเมื่อชำระเงินแล้ว)</p></div>
+    <div class="faq-item"><b>ใช้เวลาเรียนนานแค่ไหน?</b>
+      <p>3 ชั่วโมง — ทฤษฎีและสาธิตประมาณ 30 นาที ฝึกปฏิบัติ CPR/AED 2 ชั่วโมง และการช่วยผู้สำลัก 30 นาที</p></div>
+    <div class="faq-item"><b>จัดอบรมนอกสถานที่/องค์กรได้ไหม?</b>
+      <p>ได้ รับจัดอบรมในองค์กร โรงเรียน ชุมชน พร้อมออกใบกำกับภาษี/ใบเสร็จรับเงิน — ติดต่อ LINE @jiacpr</p></div>
+  </div>
+</div>
+
+<div class="cta">
+  <h3>พร้อมเป็นผู้ช่วยชีวิตแล้วหรือยัง?</h3>
+  <p class="phone">โทร: 088-558-8078 / 02-121-1669</p>
+  <p class="channels">Email: jiacpr@gmail.com | Line: @jiacpr | www.jiacpr.com</p>
+  <div class="cta-row">
+    <a class="btn btn-line" href="https://line.me/R/ti/p/@jiacpr">💬 จองผ่าน LINE @jiacpr</a>
+    <a class="btn btn-gold" href="bcpr-booking.html">จองออนไลน์</a>
+  </div>
+</div>
+
+<div class="disclaimer">
+* เนื้อหาและตารางอบรมอาจมีการปรับเปลี่ยนตามความเหมาะสม โดยไม่กระทบต่อวัตถุประสงค์การเรียนรู้<br>
+* ตรวจสอบใบรับรองผู้ผ่านการอบรมได้ที่ <a href="bcpr-cert.html">หน้าตรวจสอบใบรับรอง</a>
+</div>
+</div>
+
+<footer class="footer">
+  <b style="color:#fff">JIA TRAINER CENTER</b> — บริษัท เจี่ยรักษา จำกัด<br>
+  ศูนย์การเรียนรู้ชุมชนรับรองโดย สพฉ. เลขที่ศูนย์ LC210002 | The Street Ratchada ชั้น 3 | กรุงเทพฯ<br>
+  โทร 088-558-8078 / 02-121-1669 | <a href="mailto:jiacpr@gmail.com">jiacpr@gmail.com</a> | <a href="https://www.jiacpr.com">www.jiacpr.com</a>
+</footer>
+
+<script>
+/* รอบอบรมแบบ live — ล้มเหลวก็คงปุ่ม fallback ไว้ */
+(async function(){
+  const API = "https://tpoiyykbgsgnrdwzgzvn.supabase.co/functions/v1/bcpr-api";
+  const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwb2l5eWtiZ3NnbnJkd3pnenZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NTUwMDIsImV4cCI6MjA5MDIzMTAwMn0.c7Ow_20mpmcDqDdMQ5qnsDV6-RKAO-7-eM1y-EsEXdA";
+  const THDAY=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+  const THMON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  try{
+    const res = await fetch(API, {method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+ANON,'apikey':ANON},
+      body: JSON.stringify({action:'list_classes'})});
+    const r = await res.json();
+    if(!r.ok || !r.classes.length) return;
+    const thDate = iso => { const d = new Date(iso+'T00:00:00');
+      return `วัน${THDAY[d.getDay()]}ที่ ${d.getDate()} ${THMON[d.getMonth()]} ${d.getFullYear()+543}`; };
+    const chip = n => n<=0 ? '<span class="seats none">เต็ม</span>'
+      : n<=5 ? `<span class="seats low">เหลือ ${n} ที่</span>` : `<span class="seats">ว่าง ${n} ที่</span>`;
+    document.getElementById('datesBody').innerHTML = '<div class="dates-grid">' +
+      r.classes.slice(0,4).map(c=>`
+        <div class="date-item">
+          <div class="d"><b>${thDate(c.date)}</b><br><span style="font-size:.88em;color:#5B6B90">เวลา ${esc(c.time_slot)} น. ${c.place?'| '+esc(c.place):''}</span></div>
+          ${chip(c.seats_left)}
+          ${c.seats_left>0?`<a class="btn-book" href="bcpr-booking.html?class_id=${c.id}">จองรอบนี้</a>`:''}
+        </div>`).join('') +
+      '</div><p style="text-align:center;margin-top:14px"><a class="btn btn-gold" href="bcpr-booking.html">ดูทุกรอบ + จองออนไลน์</a></p>';
+  }catch(e){/* คงปุ่ม fallback เดิม */}
+})();
+</script>
+</body>
+</html>

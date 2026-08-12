@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>B-CPR Admin | JIA TRAINER CENTER</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+:root{
+  --navy:#1A2B5C; --navy-dark:#0E1A3E; --navy-grad:linear-gradient(135deg,#1A2B5C 0%,#0E1A3E 100%);
+  --gold:#F5C518; --gold-dark:#D4A50F; --ink:#22304F;
+  --bg:#F6F8FC; --card:#fff; --line:#E3E8F2;
+  --ok:#2E7D32; --warn:#B26A00; --bad:#C62828;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun',sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
+a{color:var(--navy);text-decoration:none}
+.container{max-width:1100px;margin:0 auto;padding:0 16px}
+.topbar{background:var(--navy-grad);color:#fff;padding:14px 0}
+.topbar .container{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.topbar b{font-size:1.1em}
+.topbar .tag{background:var(--gold);color:var(--navy);padding:2px 12px;border-radius:14px;font-weight:700;font-size:.85em}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;padding:9px 16px;font-size:.95em;font-weight:600}
+.btn-gold{background:var(--gold);color:var(--navy)}
+.btn-gold:hover{background:var(--gold-dark)}
+.btn-navy{background:var(--navy);color:#fff}
+.btn-line{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-bad{background:var(--bad);color:#fff}
+.btn-sm{padding:5px 10px;font-size:.85em;border-radius:6px}
+input,select,textarea{font-family:inherit;font-size:.95em;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);width:100%}
+label{font-size:.85em;font-weight:600;display:block;margin-bottom:4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin:16px 0}
+.card h3{color:var(--navy);margin-bottom:12px}
+.grid{display:grid;gap:12px}
+.grid.c4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+table{width:100%;border-collapse:collapse;font-size:.9em}
+th{background:var(--navy);color:#fff;padding:9px 10px;text-align:left;font-weight:600;white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{background:#FBFCFE}
+.chip{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.8em;font-weight:700;white-space:nowrap}
+.chip.ready{background:#E5F2E6;color:var(--ok)}
+.chip.wait{background:#FFF3DF;color:var(--warn)}
+.chip.paid{background:#E5F2E6;color:var(--ok)}
+.chip.off{background:#FBE5E5;color:var(--bad)}
+.chip.done{background:#E8ECF7;color:var(--navy)}
+.tabs{display:flex;gap:8px;margin:20px 0 4px;flex-wrap:wrap}
+.tabs button{background:#fff;border:1px solid var(--line);color:var(--ink)}
+.tabs button.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.muted{color:#7A88A8;font-size:.85em}
+.center{max-width:420px;margin:70px auto}
+.modal-bg{position:fixed;inset:0;background:rgba(14,26,62,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:12px;padding:20px;max-width:560px;width:100%;max-height:90vh;overflow:auto}
+.modal img{max-width:100%;border-radius:8px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 22px;border-radius:22px;font-size:.9em;display:none;z-index:60}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+@media(max-width:700px){table{display:block;overflow-x:auto;white-space:nowrap}}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="container">
+  <div><b>B-CPR ระบบหลังบ้าน</b> <span class="tag">Admin</span></div>
+  <div><a href="bcpr.html" style="color:#fff;opacity:.85">← หน้าคอร์ส</a>&nbsp;&nbsp;<button class="btn-line btn-sm" id="btnLogout" style="color:#fff;border-color:rgba(255,255,255,.4);display:none" onclick="logout()">ออกจากระบบ</button></div>
+</div></div>
+
+<div class="container">
+
+<!-- login -->
+<div id="loginView" class="center card">
+  <h3>เข้าสู่ระบบแอดมิน</h3>
+  <label>Admin Key</label>
+  <input type="password" id="adminKey" placeholder="กรอกรหัสแอดมิน" onkeydown="if(event.key==='Enter')login()">
+  <div style="margin-top:12px"><button class="btn-gold" style="width:100%" onclick="login()">เข้าสู่ระบบ</button></div>
+  <p class="muted" id="loginMsg" style="margin-top:8px"></p>
+</div>
+
+<!-- app -->
+<div id="appView" style="display:none">
+  <div class="tabs">
+    <button id="tab-classes" class="active" onclick="showTab('classes')">📅 รอบอบรม</button>
+    <button id="tab-bookings" onclick="showTab('bookings')">🎟️ การจอง</button>
+    <button id="tab-certs" onclick="showTab('certs')">📜 ใบเซอร์</button>
+  </div>
+
+  <!-- classes -->
+  <div id="view-classes">
+    <div class="card">
+      <h3>เปิดรอบอบรมใหม่</h3>
+      <div class="grid c4">
+        <div><label>วันที่</label><input type="date" id="clDate"></div>
+        <div><label>เวลา</label><select id="clSlot"><option>09:00-12:00</option><option>13:00-16:00</option><option>17:00-20:00</option></select></div>
+        <div><label>รับสูงสุด (คน)</label><input type="number" id="clMax" value="20" min="1" max="200"></div>
+        <div><label>สถานที่</label><input id="clPlace" value="The Street Ratchada ชั้น 3"></div>
+      </div>
+      <div style="margin-top:10px"><label>หมายเหตุ</label><input id="clNote" placeholder="(ไม่บังคับ)"></div>
+      <div style="margin-top:12px"><button class="btn-gold" onclick="createClass()">+ เปิดรอบนี้</button></div>
+    </div>
+    <div class="card">
+      <h3>รอบอบรมทั้งหมด</h3>
+      <div style="overflow-x:auto"><table id="tblClasses"><thead><tr>
+        <th>วันที่</th><th>เวลา</th><th>จอง/รับ</th><th>สถานะ</th><th>สถานที่</th><th>หมายเหตุ</th><th>จัดการ</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- bookings -->
+  <div id="view-bookings" style="display:none">
+    <div class="card">
+      <h3>รายการจอง <span class="muted">(ช่องทางเว็บ B-CPR)</span></h3>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select id="bkFilter" style="max-width:220px" onchange="loadBookings()">
+          <option value="">ทุกสถานะ</option>
+          <option value="รอตรวจสอบ">รอตรวจสอบ</option>
+          <option value="ชำระแล้ว">ชำระแล้ว</option>
+          <option value="ยกเลิก">ยกเลิก</option>
+        </select>
+        <button class="btn-line" onclick="loadBookings()">รีเฟรช</button>
+      </div>
+      <div style="overflow-x:auto"><table id="tblBookings"><thead><tr>
+        <th>วันที่จอง</th><th>ชื่อ</th><th>ติดต่อ</th><th>รอบเรียน</th><th>คน</th><th>ยอด</th><th>สถานะ</th><th>เช็คชื่อ</th><th>จัดการ</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- certs -->
+  <div id="view-certs" style="display:none">
+    <div class="card">
+      <h3>ใบเซอร์ที่ออกแล้ว</h3>
+      <div style="overflow-x:auto"><table id="tblCerts"><thead><tr>
+        <th>เลขที่</th><th>ชื่อผู้ผ่านอบรม</th><th>วันออก</th><th>หมดอายุ</th><th>สถานะ</th><th>จัดการ</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- slip modal -->
+<div class="modal-bg" id="slipModal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal"><h3 style="color:var(--navy);margin-bottom:10px">สลิปการโอนเงิน</h3><div id="slipBody">กำลังโหลด…</div>
+  <div style="margin-top:12px;text-align:right"><button class="btn-line" onclick="document.getElementById('slipModal').classList.remove('show')">ปิด</button></div></div>
+</div>
+
+<!-- issue cert modal -->
+<div class="modal-bg" id="certModal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <h3 style="color:var(--navy)">ออกใบเซอร์</h3>
+    <p class="muted">พิมพ์ชื่อ-นามสกุลผู้ผ่านอบรม 1 คนต่อบรรทัด (ตามจำนวนคนในรายการจอง)</p>
+    <textarea id="certNames" rows="5" style="margin-top:8px"></textarea>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn-line" onclick="document.getElementById('certModal').classList.remove('show')">ยกเลิก</button>
+      <button class="btn-gold" onclick="issueCerts()">ออกใบเซอร์</button>
+    </div>
+    <div id="certResult" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "https://tpoiyykbgsgnrdwzgzvn.supabase.co/functions/v1/bcpr-api";
+const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwb2l5eWtiZ3NnbnJkd3pnenZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NTUwMDIsImV4cCI6MjA5MDIzMTAwMn0.c7Ow_20mpmcDqDdMQ5qnsDV6-RKAO-7-eM1y-EsEXdA";
+const THDAY=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+const THMON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+let certBookingId = null;
+
+function thDate(iso){ if(!iso) return '-'; const d=new Date(iso+(iso.length<=10?'T00:00:00':''));
+  return `${THDAY[d.getDay()]} ${d.getDate()} ${THMON[d.getMonth()]} ${d.getFullYear()+543}`; }
+function thDateTime(iso){ const d=new Date(iso); return `${d.getDate()} ${THMON[d.getMonth()]} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 2600); }
+
+async function api(action, body={}, needKey=true){
+  const headers = {'Content-Type':'application/json','Authorization':'Bearer '+ANON,'apikey':ANON};
+  if(needKey) headers['x-admin-key'] = sessionStorage.getItem('bcprAdminKey') || '';
+  const res = await fetch(API, {method:'POST', headers, body: JSON.stringify({action, ...body})});
+  const data = await res.json().catch(()=>({ok:false,error:'BAD_RESPONSE'}));
+  if(res.status===401){ logout(); throw new Error('UNAUTHORIZED'); }
+  return data;
+}
+
+async function login(){
+  const key = document.getElementById('adminKey').value.trim();
+  if(!key) return;
+  document.getElementById('loginMsg').textContent = 'กำลังตรวจสอบ…';
+  sessionStorage.setItem('bcprAdminKey', key);
+  try{
+    const r = await api('admin_ping');
+    if(r.ok){ enterApp(); return; }
+  }catch(e){}
+  sessionStorage.removeItem('bcprAdminKey');
+  document.getElementById('loginMsg').textContent = 'รหัสไม่ถูกต้อง';
+}
+function logout(){
+  sessionStorage.removeItem('bcprAdminKey');
+  document.getElementById('appView').style.display='none';
+  document.getElementById('loginView').style.display='block';
+  document.getElementById('btnLogout').style.display='none';
+  document.getElementById('loginMsg').textContent='';
+}
+function enterApp(){
+  document.getElementById('loginView').style.display='none';
+  document.getElementById('appView').style.display='block';
+  document.getElementById('btnLogout').style.display='inline-block';
+  loadClasses(); loadBookings(); loadCerts();
+}
+function showTab(name){
+  for(const t of ['classes','bookings','certs']){
+    document.getElementById('view-'+t).style.display = t===name?'block':'none';
+    document.getElementById('tab-'+t).classList.toggle('active', t===name);
+  }
+}
+
+/* ---------- classes ---------- */
+async function loadClasses(){
+  const r = await api('admin_list_classes');
+  if(!r.ok) return toast('โหลดรอบอบรมไม่สำเร็จ');
+  const chip = s => s==='ready'?'<span class="chip ready">เปิดรับ</span>'
+    : s==='cancelled'?'<span class="chip off">ปิด/ยกเลิก</span>'
+    : s==='full'?'<span class="chip wait">เต็ม</span>'
+    : s==='completed'?'<span class="chip done">จบแล้ว</span>'
+    : '<span class="chip wait">'+esc(s)+'</span>';
+  document.querySelector('#tblClasses tbody').innerHTML = r.classes.map(c=>`<tr>
+    <td>${thDate(c.date)}</td><td>${esc(c.time_slot)}</td>
+    <td><b>${c.booked}</b>/${c.max_students}</td>
+    <td>${chip(c.status)}</td><td>${esc(c.place)}</td><td>${esc(c.note)}</td>
+    <td class="actions">
+      ${c.status==='ready'?`<button class="btn-bad btn-sm" onclick="setClassStatus('${c.id}','cancelled')">ปิดรับ</button>`:''}
+      ${c.status==='cancelled'?`<button class="btn-ok btn-sm" onclick="setClassStatus('${c.id}','ready')">เปิดรับ</button>`:''}
+      ${c.status==='ready'?`<button class="btn-line btn-sm" onclick="setClassStatus('${c.id}','completed')">จบรอบ</button>`:''}
+    </td></tr>`).join('') || '<tr><td colspan="7" class="muted">ยังไม่มีรอบอบรม</td></tr>';
+}
+async function createClass(){
+  const date = document.getElementById('clDate').value;
+  const body = { date, time_slot: document.getElementById('clSlot').value,
+    max_students: parseInt(document.getElementById('clMax').value,10),
+    place: document.getElementById('clPlace').value, note: document.getElementById('clNote').value };
+  if(!date) return toast('กรุณาเลือกวันที่');
+  const r = await api('admin_create_class', body);
+  if(r.ok){ toast('เปิดรอบสำเร็จ'); document.getElementById('clNote').value=''; loadClasses(); }
+  else toast('ผิดพลาด: '+(r.error||''));
+}
+async function setClassStatus(id, status){
+  const labels={cancelled:'ปิดรับรอบนี้?', ready:'เปิดรับรอบนี้อีกครั้ง?', completed:'ทำเครื่องหมายว่ารอบนี้จบแล้ว?'};
+  if(!confirm(labels[status]||'ยืนยัน?')) return;
+  const r = await api('admin_update_class', {id, patch:{status}});
+  r.ok ? (toast('อัปเดตแล้ว'), loadClasses()) : toast('ผิดพลาด: '+(r.error||''));
+}
+
+/* ---------- bookings ---------- */
+async function loadBookings(){
+  const f = document.getElementById('bkFilter').value;
+  const r = await api('admin_list_bookings', f?{payment_status:f}:{});
+  if(!r.ok) return toast('โหลดการจองไม่สำเร็จ');
+  const chip = s => s==='ชำระแล้ว'?'<span class="chip paid">ชำระแล้ว</span>'
+    : s==='รอตรวจสอบ'?'<span class="chip wait">รอตรวจสอบ</span>'
+    : '<span class="chip off">'+esc(s)+'</span>';
+  document.querySelector('#tblBookings tbody').innerHTML = r.bookings.map(b=>`<tr>
+    <td class="muted">${thDateTime(b.created_at)}</td>
+    <td><b>${esc(b.name)}</b></td>
+    <td>${esc(b.tel)}${b.email?'<br><span class="muted">'+esc(b.email)+'</span>':''}</td>
+    <td>${thDate(b.start_date)}<br><span class="muted">${esc(b.time_slot)}</span></td>
+    <td>${b.total_people}</td>
+    <td>${Number(b.final_price).toLocaleString()}฿</td>
+    <td>${chip(b.payment_status)}</td>
+    <td>${b.attended_at?'✅':`<button class="btn-line btn-sm" onclick="markAttended('${b.id}')">เช็คชื่อ</button>`}</td>
+    <td class="actions">
+      ${b.payment_slip?`<button class="btn-line btn-sm" onclick="viewSlip('${esc(b.payment_slip)}')">ดูสลิป</button>`:''}
+      ${b.payment_status==='รอตรวจสอบ'?`<button class="btn-ok btn-sm" onclick="setBooking('${b.id}','ชำระแล้ว')">อนุมัติ</button>
+      <button class="btn-bad btn-sm" onclick="setBooking('${b.id}','ยกเลิก')">ปฏิเสธ</button>`:''}
+      ${b.payment_status==='ชำระแล้ว'?`<button class="btn-gold btn-sm" onclick="openCertModal('${b.id}', ${b.total_people}, '${esc(b.name).replace(/'/g,"\\'")}')">ออกใบเซอร์</button>`:''}
+    </td></tr>`).join('') || '<tr><td colspan="9" class="muted">ยังไม่มีการจอง</td></tr>';
+}
+async function setBooking(id, status){
+  const msg = status==='ชำระแล้ว' ? 'ยืนยันว่าได้รับชำระเงินแล้ว?' : 'ปฏิเสธการจองนี้? (ที่นั่งจะถูกคืน)';
+  if(!confirm(msg)) return;
+  const r = await api('admin_update_booking', {id, patch:{payment_status:status}});
+  r.ok ? (toast('อัปเดตแล้ว'), loadBookings(), loadClasses()) : toast('ผิดพลาด: '+(r.error||''));
+}
+async function markAttended(id){
+  const r = await api('admin_update_booking', {id, patch:{attended:true}});
+  r.ok ? (toast('เช็คชื่อแล้ว'), loadBookings()) : toast('ผิดพลาด');
+}
+async function viewSlip(path){
+  document.getElementById('slipModal').classList.add('show');
+  document.getElementById('slipBody').textContent = 'กำลังโหลด…';
+  const r = await api('admin_sign_slip', {path});
+  document.getElementById('slipBody').innerHTML = r.ok ? `<img src="${r.url}" alt="สลิป">` : 'เปิดสลิปไม่สำเร็จ';
+}
+
+/* ---------- certificates ---------- */
+function openCertModal(bookingId, people, name){
+  certBookingId = bookingId;
+  document.getElementById('certNames').value = people===1 ? name : name+'\n';
+  document.getElementById('certResult').innerHTML = '';
+  document.getElementById('certModal').classList.add('show');
+}
+async function issueCerts(){
+  const names = document.getElementById('certNames').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!names.length) return toast('กรุณากรอกชื่ออย่างน้อย 1 คน');
+  const r = await api('admin_issue_cert', {booking_id: certBookingId, attendees: names.map(n=>({name:n}))});
+  if(!r.ok){ document.getElementById('certResult').innerHTML = '<p style="color:var(--bad)">ผิดพลาด: '+esc(r.error)+'</p>'; return; }
+  document.getElementById('certResult').innerHTML = '<b style="color:var(--ok)">ออกใบเซอร์สำเร็จ</b><ul style="margin:8px 0 0 18px">' +
+    r.certificates.map(c=>`<li>${esc(c.name)} — <b>${c.code}</b>
+      <a href="bcpr-cert.html?code=${c.code}" target="_blank">ตรวจสอบ</a> |
+      <a href="bcpr-cert.html?code=${c.code}&print=1" target="_blank">พิมพ์ใบเซอร์</a></li>`).join('') + '</ul>';
+  loadCerts();
+}
+async function loadCerts(){
+  const r = await api('admin_list_certs');
+  if(!r.ok) return;
+  document.querySelector('#tblCerts tbody').innerHTML = r.certificates.map(c=>`<tr>
+    <td><b>${c.code}</b></td><td>${esc(c.learner_name)}</td>
+    <td>${thDate(c.issued_at)}</td><td>${thDate(c.expires_at)}</td>
+    <td>${c.revoked_at?'<span class="chip off">เพิกถอน</span>':'<span class="chip paid">ใช้งานได้</span>'}</td>
+    <td class="actions">
+      <a class="btn-line btn-sm" style="display:inline-block" href="bcpr-cert.html?code=${c.code}&print=1" target="_blank">พิมพ์</a>
+      ${c.revoked_at?'':`<button class="btn-bad btn-sm" onclick="revokeCert('${c.code}')">เพิกถอน</button>`}
+    </td></tr>`).join('') || '<tr><td colspan="6" class="muted">ยังไม่มีใบเซอร์</td></tr>';
+}
+async function revokeCert(code){
+  if(!confirm('เพิกถอนใบเซอร์ '+code+' ?')) return;
+  const r = await api('admin_revoke_cert', {code});
+  r.ok ? (toast('เพิกถอนแล้ว'), loadCerts()) : toast('ผิดพลาด');
+}
+
+/* auto-login if key stored */
+if(sessionStorage.getItem('bcprAdminKey')){
+  api('admin_ping').then(r=>{ if(r.ok) enterApp(); }).catch(()=>{});
+}
+</script>
+</body>
+</html>
