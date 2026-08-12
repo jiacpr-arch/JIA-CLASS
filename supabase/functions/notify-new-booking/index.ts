@@ -12,6 +12,8 @@
 //   class-web / bcpr-web → จองจากเว็บ class.morroo.com พร้อมสลิป รอตรวจสอบ → ชี้ไปหน้าแอดมินของ class
 //   class-admin          → แอดมิน/เซลล์ลงจองแทนลูกค้าเอง (ไม่ต้องรีบติดต่อกลับ แค่แจ้งให้ทีมรู้)
 //   อื่นๆ                 → ฟอร์มเดิมของ cpr.morroo.com (ยังไม่มีรอบ/ยังไม่ชำระ) → ชี้ไป cpr.morroo.com/admin
+// ทั้ง class-web/bcpr-web และ class-admin แสดง "ที่นั่งคงเหลือ" ของรอบนั้นด้วย (คำนวณสดจาก
+// classes.max_students ลบยอดจองปัจจุบันในสถานะ รอตรวจสอบ/ชำระแล้ว — รวมแถวที่เพิ่ง insert ไปแล้ว)
 //
 // Secrets ที่ใช้ (ตั้งผ่าน Supabase, ใช้ร่วมกับฟังก์ชันอื่นในโปรเจกต์):
 //   LINE_CHANNEL_ACCESS_TOKEN  (มีอยู่แล้ว — fallback อ่านจากตาราง jiaroo_secrets)
@@ -33,6 +35,7 @@ const WEBHOOK_SECRET = Deno.env.get("NOTIFY_WEBHOOK_SECRET") || "";
 const CLASS_CHANNELS = ["class-web", "bcpr-web"];
 const CLASS_ADMIN_CHANNEL = "class-admin";
 const CLASS_ADMIN_URL = "https://class.morroo.com/bcpr-admin.html";
+const HOLD_STATUSES = ["รอตรวจสอบ", "ชำระแล้ว"];
 
 // อ่าน LINE token แบบเดียวกับ notify-new-student (env ก่อน แล้วค่อย fallback ตาราง secrets)
 async function loadToken(): Promise<string> {
@@ -79,6 +82,18 @@ async function pushMany(token: string, ids: string[], text: string) {
   return { sent, failed, errors };
 }
 
+// ที่นั่งคงเหลือของรอบที่เพิ่งจอง — รวมยอดจองปัจจุบัน (รวมแถวที่เพิ่ง insert ไปแล้วด้วย) เทียบกับ max_students
+// คืน null ถ้าหารอบไม่เจอ (เช่น booking เก่าที่ยังไม่มี class_id) — buildText จะข้ามบรรทัดนี้ไปเงียบๆ
+async function getSeatsLeft(classId: string | null | undefined): Promise<{ left: number; max: number } | null> {
+  if (!classId) return null;
+  const { data: cls } = await supa.from("classes").select("max_students").eq("id", classId).maybeSingle();
+  if (!cls) return null;
+  const { data: bks } = await supa.from("bookings").select("total_people")
+    .eq("class_id", classId).in("payment_status", HOLD_STATUSES);
+  const taken = (bks || []).reduce((sum: number, b: { total_people: number | null }) => sum + (b.total_people || 0), 0);
+  return { left: Math.max(cls.max_students - taken, 0), max: cls.max_students };
+}
+
 // วันที่แบบไทยสั้นๆ สำหรับข้อความ LINE (2026-08-22 → 22 ส.ค. 2569)
 const TH_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 function thDate(iso: string | null | undefined): string {
@@ -89,7 +104,7 @@ function thDate(iso: string | null | undefined): string {
 }
 
 // deno-lint-ignore no-explicit-any
-function buildText(rec: any): string {
+function buildText(rec: any, seats: { left: number; max: number } | null): string {
   const name = rec.name || "(ไม่ระบุชื่อ)";
   const tel = rec.tel || "-";
   const courseName = rec.course_name || rec.course_type || "-";
@@ -98,13 +113,14 @@ function buildText(rec: any): string {
   const note = rec.note || "-";
   const price = rec.final_price ?? "-";
   const channel = rec.channel || "";
+  const seatsLine = seats ? `ที่นั่งคงเหลือ: ${seats.left}/${seats.max} ที่\n` : "";
 
   // จองจากเว็บ class.morroo.com — เลือกรอบเรียนและแนบสลิปมาแล้ว ต้องตรวจสลิปเพื่อยืนยัน
   if (CLASS_CHANNELS.includes(channel)) {
     return `🔔 มีการจองใหม่จากเว็บ class.morroo.com\n\n` +
       `ชื่อ: ${name}\nเบอร์: ${tel}\nคอร์ส: ${courseName}\n` +
       `รอบเรียน: ${thDate(rec.start_date)} ${timeSlot}\n` +
-      `จำนวนคน: ${people}\nยอด: ${price}\nสถานะ: ${rec.payment_status || "-"}\n` +
+      `จำนวนคน: ${people}\nยอด: ${price}\n${seatsLine}สถานะ: ${rec.payment_status || "-"}\n` +
       `โน้ต: ${note}\n\n` +
       `ตรวจสลิปแล้วกดอนุมัติที่ ${CLASS_ADMIN_URL}`;
   }
@@ -114,7 +130,7 @@ function buildText(rec: any): string {
     return `📝 แอดมิน/เซลส์ลงจองแทนลูกค้า\n\n` +
       `ชื่อ: ${name}\nเบอร์: ${tel}\nคอร์ส: ${courseName}\n` +
       `รอบเรียน: ${thDate(rec.start_date)} ${timeSlot}\n` +
-      `จำนวนคน: ${people}\nยอด: ${price}\n` +
+      `จำนวนคน: ${people}\nยอด: ${price}\n${seatsLine}` +
       `ชำระโดย: ${rec.payment_mode || "-"} (${rec.payment_status || "-"})\n` +
       `โน้ต: ${note}\n\n` +
       `ที่นั่งถูกกันไว้แล้ว ดูรายการที่ ${CLASS_ADMIN_URL}`;
@@ -151,7 +167,8 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ ignored: payload.type }), { headers: { "Content-Type": "application/json" } });
   }
 
-  const text = buildText(rec);
+  const seats = await getSeatsLeft(rec.class_id);
+  const text = buildText(rec, seats);
   const [individuals, groups] = await Promise.all([getTeamRecipients(), getGroupRecipients()]);
   const recipients = [...individuals, ...groups];
 
