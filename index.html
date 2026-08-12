@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>หลักสูตรทั้งหมด | JIA TRAINER CENTER</title>
 <meta name="description" content="หลักสูตร CPR, BLS, ACLS, AED ทั้งหมดของ JIA TRAINER CENTER ศูนย์ฝึกอบรมมาตรฐาน AHA/ILCOR">
+<meta name="theme-color" content="#0b1f33">
+<meta property="og:type" content="website">
+<meta property="og:title" content="JIA TRAINER CENTER | ฝึกให้พร้อม ก่อนวินาทีสำคัญ">
+<meta property="og:description" content="หลักสูตร CPR, AED และการช่วยชีวิตขั้นสูง พร้อมการฝึกแบบลงมือทำจริง">
+<meta property="og:image" content="assets/jia-class-hero.png">
+<link rel="preload" href="assets/jia-class-hero.png" as="image" fetchpriority="high">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
@@ -118,28 +124,48 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
 .course-card .card-btn:hover{background:#8B1A1A;text-decoration:none}
 .group-title{font-size:1.3em;font-weight:700;color:#C41E24;margin:30px 0 10px;padding-bottom:8px;border-bottom:3px solid #C41E24}
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
-<body>
+<body class="home-page">
+<a href="#main-content" class="skip-link">ข้ามไปยังเนื้อหา</a>
+<nav class="site-nav" aria-label="เมนูหลัก">
+  <a href="index.html" class="site-logo">JIA TRAINER CENTER</a>
+  <div class="site-links">
+    <a href="#courses">หลักสูตร</a>
+    <a href="#experience">การฝึกอบรม</a>
+    <a href="#contact">ติดต่อ</a>
+    <a href="bcpr-booking.html" class="nav-cta">จองอบรม</a>
+  </div>
+</nav>
 <div class="hero">
   <div class="container">
-    <h1>JIA TRAINER CENTER</h1>
-    <p class="subtitle">ศูนย์ฝึกอบรม CPR &amp; AED มาตรฐาน</p>
-    <p class="desc">หลักสูตรอบรมทั้งหมด 16 หลักสูตร — ครอบคลุมทุกระดับตั้งแต่ประชาชนทั่วไปจนถึงบุคลากรทางการแพทย์<br>มาตรฐาน AHA / ILCOR | เทคโนโลยี SimCPR | วิทยากรมืออาชีพ 500+ รอบ</p>
-    <div class="badges">
-      <span class="badge red">มาตรฐาน AHA/ILCOR</span>
-      <span class="badge blue">SimCPR Technology</span>
-      <span class="badge green">ใบประกาศนียบัตร</span>
+    <div class="hero-content">
+      <p class="eyebrow">JIA TRAINER CENTER</p>
+      <h1>ฝึกให้พร้อม<br>ก่อนวินาทีสำคัญ</h1>
+      <p class="subtitle">ศูนย์ฝึกอบรม CPR, AED และการช่วยชีวิตขั้นสูงสำหรับทุกคน</p>
+      <p class="desc">16 หลักสูตรมาตรฐาน AHA / ILCOR พร้อมเทคโนโลยี SimCPR และทีมวิทยากรมืออาชีพ</p>
+      <div class="hero-actions">
+        <a href="#courses" class="hero-button primary">ดูหลักสูตรทั้งหมด</a>
+        <a href="bcpr-booking.html" class="hero-button secondary">จองอบรมออนไลน์</a>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="container">
+<main id="main-content">
+<div class="container" id="courses">
 <div class="stats">
   <div class="stat"><div class="num">500+</div><div class="label">รอบการอบรม</div></div>
   <div class="stat"><div class="num">10,000+</div><div class="label">ผู้ผ่านการอบรม</div></div>
   <div class="stat"><div class="num">98%</div><div class="label">อัตราผ่านการสอบ</div></div>
   <div class="stat"><div class="num">100+</div><div class="label">องค์กรที่ไว้วางใจ</div></div>
 </div>
+
+<section class="intro-block">
+  <p class="kicker">Training that matters</p>
+  <h2>ทักษะที่มั่นใจได้<br>เมื่อทุกวินาทีมีความหมาย</h2>
+  <p>เลือกหลักสูตรที่เหมาะกับคุณ ตั้งแต่การช่วยชีวิตสำหรับประชาชน ไปจนถึงสถานการณ์ ACLS สำหรับบุคลากรทางการแพทย์</p>
+</section>
 
 <div class="group-title">ACLS — หลักสูตรขั้นสูง</div><div class="course-grid">
 <div class="course-card">
@@ -228,12 +254,28 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
   <a href="16_specimen.html" class="card-btn">ดูรายละเอียด →</a>
 </div></div>
 
-<div class="cta">
+<section class="experience" id="experience" aria-labelledby="experience-title">
+  <div class="experience-media" role="img" aria-label="การฝึกกดหน้าอกบนหุ่น CPR พร้อมระบบแสดงผลการฝึก"></div>
+  <div class="experience-copy">
+    <p class="kicker">Practice with precision</p>
+    <h2 id="experience-title">เรียนรู้จากการลงมือทำจริง</h2>
+    <p>ทุกหลักสูตรออกแบบให้ผู้เรียนได้ฝึกซ้ำ รับผลตอบกลับ และตัดสินใจในสถานการณ์จำลองอย่างเป็นระบบ</p>
+    <ul class="feature-list">
+      <li><span class="feature-number">01</span><span><strong>ฝึกแบบ Hands-on</strong><span>อุปกรณ์และสถานการณ์ใกล้เคียงการใช้งานจริง</span></span></li>
+      <li><span class="feature-number">02</span><span><strong>Feedback ที่วัดผลได้</strong><span>พัฒนาคุณภาพการช่วยชีวิตจากข้อมูล ไม่ใช่การคาดเดา</span></span></li>
+      <li><span class="feature-number">03</span><span><strong>พร้อมใช้ในวันจริง</strong><span>เน้นความมั่นใจ การสื่อสาร และการทำงานเป็นทีม</span></span></li>
+    </ul>
+  </div>
+</section>
+
+<div class="cta" id="contact">
   <h3>สนใจจองคอร์สอบรม?</h3>
   <p class="phone">โทร: 088-558-8078 / 02-121-1669</p>
   <p class="channels">Email: jiacpr@gmail.com | Line: @jiacpr | www.jiacpr.com<br>The Street Ratchada ชั้น 3 | กรุงเทพฯ</p>
+  <div class="cta-actions"><a href="bcpr-booking.html">จองอบรมออนไลน์</a><a href="tel:0885588078">โทรหาเรา</a></div>
 </div>
 </div>
+</main>
 
 <footer class="footer">
   <b>JIA TRAINER CENTER</b> — ศูนย์ฝึกอบรม CPR &amp; AED มาตรฐาน<br>
