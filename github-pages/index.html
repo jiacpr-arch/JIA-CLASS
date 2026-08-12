@@ -143,7 +143,7 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
       <p class="eyebrow">JIA TRAINER CENTER</p>
       <h1>ฝึกให้พร้อม<br>ก่อนวินาทีสำคัญ</h1>
       <p class="subtitle">ศูนย์ฝึกอบรม CPR, AED และการช่วยชีวิตขั้นสูงสำหรับทุกคน</p>
-      <p class="desc">16 หลักสูตรมาตรฐาน AHA / ILCOR พร้อมเทคโนโลยี SimCPR และทีมวิทยากรมืออาชีพ</p>
+      <p class="desc">17 หลักสูตรมาตรฐาน AHA / ILCOR พร้อมเทคโนโลยี SimCPR และทีมวิทยากรมืออาชีพ</p>
       <div class="hero-actions">
         <a href="#courses" class="hero-button primary">ดูหลักสูตรทั้งหมด</a>
         <a href="bcpr-booking.html" class="hero-button secondary">จองอบรมออนไลน์</a>
@@ -154,7 +154,7 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
 
 <main id="main-content">
 <div class="container" id="courses">
-<div class="stats">
+<div class="stats hero-stats" aria-label="ความสำเร็จของ JIA Trainer Center">
   <div class="stat"><div class="num">500+</div><div class="label">รอบการอบรม</div></div>
   <div class="stat"><div class="num">10,000+</div><div class="label">ผู้ผ่านการอบรม</div></div>
   <div class="stat"><div class="num">98%</div><div class="label">อัตราผ่านการสอบ</div></div>
@@ -165,6 +165,20 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
   <p class="kicker">Training that matters</p>
   <h2>ทักษะที่มั่นใจได้<br>เมื่อทุกวินาทีมีความหมาย</h2>
   <p>เลือกหลักสูตรที่เหมาะกับคุณ ตั้งแต่การช่วยชีวิตสำหรับประชาชน ไปจนถึงสถานการณ์ ACLS สำหรับบุคลากรทางการแพทย์</p>
+</section>
+
+<section class="course-directory" aria-labelledby="courses-title">
+  <div class="course-directory-copy">
+    <p class="kicker">Explore the program</p>
+    <h2 id="courses-title">เลือกเส้นทางการเรียนรู้<br>ที่เหมาะกับคุณ</h2>
+  </div>
+  <div class="course-filter" aria-label="กรองตามประเภทหลักสูตร">
+    <button class="filter-button is-active" type="button" data-filter="all" aria-pressed="true">ทุกหลักสูตร <span>17</span></button>
+    <button class="filter-button" type="button" data-filter="0" aria-pressed="false">ACLS</button>
+    <button class="filter-button" type="button" data-filter="1" aria-pressed="false">Workshop</button>
+    <button class="filter-button" type="button" data-filter="2" aria-pressed="false">BLS / CPR</button>
+    <button class="filter-button" type="button" data-filter="3" aria-pressed="false">หลักสูตรอื่น</button>
+  </div>
 </section>
 
 <div class="group-title">ACLS — หลักสูตรขั้นสูง</div><div class="course-grid">
@@ -282,5 +296,30 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
   The Street Ratchada ชั้น 3 | กรุงเทพฯ<br>
   โทร 088-558-8078 / 02-121-1669 | <a href="mailto:jiacpr@gmail.com">jiacpr@gmail.com</a> | <a href="https://www.jiacpr.com">www.jiacpr.com</a>
 </footer>
+<script>
+  (() => {
+    const buttons = [...document.querySelectorAll('.filter-button')];
+    const groups = [...document.querySelectorAll('.group-title')].map((title, index) => ({
+      title,
+      grid: title.nextElementSibling,
+      index: String(index)
+    }));
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const filter = button.dataset.filter;
+        buttons.forEach((item) => {
+          const active = item === button;
+          item.classList.toggle('is-active', active);
+          item.setAttribute('aria-pressed', String(active));
+        });
+        groups.forEach(({ title, grid, index }) => {
+          const visible = filter === 'all' || filter === index;
+          title.classList.toggle('is-hidden', !visible);
+          grid.classList.toggle('is-hidden', !visible);
+        });
+      });
+    });
+  })();
+</script>
 </body>
 </html>
