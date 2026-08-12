@@ -63,7 +63,7 @@ tr:hover td{background:#FBFCFE}
 </head>
 <body>
 <div class="topbar"><div class="container">
-  <div><b>B-CPR ระบบหลังบ้าน</b> <span class="tag">Admin</span></div>
+  <div><b>B-CPR ระบบหลังบ้าน</b> <span class="tag">Admin</span> <span class="tag" id="actorTag" style="display:none;background:#fff;color:var(--navy)"></span></div>
   <div><a href="bcpr.html" style="color:#fff;opacity:.85">← หน้าคอร์ส</a>&nbsp;&nbsp;<button class="btn-line btn-sm" id="btnLogout" style="color:#fff;border-color:rgba(255,255,255,.4);display:none" onclick="logout()">ออกจากระบบ</button></div>
 </div></div>
 
@@ -72,8 +72,11 @@ tr:hover td{background:#FBFCFE}
 <!-- login -->
 <div id="loginView" class="center card">
   <h3>เข้าสู่ระบบแอดมิน</h3>
-  <label>Admin Key</label>
-  <input type="password" id="adminKey" placeholder="กรอกรหัสแอดมิน" onkeydown="if(event.key==='Enter')login()">
+  <label>ชื่อผู้ใช้งาน</label>
+  <input id="actorName" placeholder="ชื่อ-นามสกุล หรือชื่อเล่นของคุณ" onkeydown="if(event.key==='Enter')login()">
+  <div style="margin-top:10px"><label>Admin Key</label>
+  <input type="password" id="adminKey" placeholder="กรอกรหัสแอดมิน" onkeydown="if(event.key==='Enter')login()"></div>
+  <p class="muted" style="margin-top:6px">ชื่อผู้ใช้งานจะถูกบันทึกไว้กับทุกรายการที่คุณทำ เพื่อให้ตรวจสอบย้อนหลังได้</p>
   <div style="margin-top:12px"><button class="btn-gold" style="width:100%" onclick="login()">เข้าสู่ระบบ</button></div>
   <p class="muted" id="loginMsg" style="margin-top:8px"></p>
 </div>
@@ -84,6 +87,7 @@ tr:hover td{background:#FBFCFE}
     <button id="tab-classes" class="active" onclick="showTab('classes')">📅 รอบอบรม</button>
     <button id="tab-bookings" onclick="showTab('bookings')">🎟️ การจอง</button>
     <button id="tab-certs" onclick="showTab('certs')">📜 ใบเซอร์</button>
+    <button id="tab-audit" onclick="showTab('audit')">📋 ประวัติการใช้งาน</button>
     <button id="tab-help" onclick="showTab('help')">📖 วิธีใช้งาน</button>
   </div>
 
@@ -138,7 +142,7 @@ tr:hover td{background:#FBFCFE}
         <button class="btn-line" onclick="loadBookings()">รีเฟรช</button>
       </div>
       <div style="overflow-x:auto"><table id="tblBookings"><thead><tr>
-        <th>วันที่จอง</th><th>ชื่อ</th><th>ติดต่อ</th><th>รอบเรียน</th><th>คน</th><th>ยอด</th><th>สถานะ</th><th>เช็คชื่อ</th><th>จัดการ</th>
+        <th>วันที่จอง</th><th>ชื่อ</th><th>จองโดย</th><th>ติดต่อ</th><th>รอบเรียน</th><th>คน</th><th>ยอด</th><th>สถานะ</th><th>เช็คชื่อ</th><th>จัดการ</th>
       </tr></thead><tbody></tbody></table></div>
     </div>
   </div>
@@ -153,6 +157,17 @@ tr:hover td{background:#FBFCFE}
     </div>
   </div>
 
+  <!-- audit log -->
+  <div id="view-audit" style="display:none">
+    <div class="card">
+      <h3>ประวัติการใช้งาน <span class="muted">(ตรวจสอบย้อนหลังว่าใครทำอะไรเมื่อไหร่)</span></h3>
+      <div style="margin-bottom:12px"><button class="btn-line" onclick="loadAuditLog()">รีเฟรช</button></div>
+      <div style="overflow-x:auto"><table id="tblAudit"><thead><tr>
+        <th>เวลา</th><th>ผู้ทำรายการ</th><th>การกระทำ</th><th>รายการ</th><th>รายละเอียด</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
   <!-- help -->
   <div id="view-help" style="display:none">
     <div class="card">
@@ -160,7 +175,8 @@ tr:hover td{background:#FBFCFE}
       <ol style="margin:10px 0 0 20px;line-height:1.9">
         <li><b>เปิดรอบอบรม</b> — แท็บ 📅 รอบอบรม → กรอกวันที่/เวลา/จำนวนรับ → กด <span class="chip ref">+ เปิดรอบนี้</span> ลูกค้าจะเห็นและจองได้ทันที</li>
         <li><b>ตรวจสลิปและอนุมัติ</b> — แท็บ 🎟️ การจอง → กรองสถานะ <span class="chip ref">รอตรวจสอบ</span> → กด <span class="chip ref">ดูสลิป</span> เทียบยอดให้ตรง (600 บาท × จำนวนคน) → กด <span class="chip ref">อนุมัติ</span> หรือ <span class="chip ref">ปฏิเสธ</span></li>
-        <li><b>ลงจองแทนลูกค้า (จองผ่านเซลล์/โทร/หน้างาน)</b> — แท็บ 🎟️ การจอง → ฟอร์ม <span class="chip ref">ลงจองแทนลูกค้า</span> ด้านบน → เลือกรอบ กรอกชื่อ-เบอร์-จำนวนคน ปรับยอดได้กรณีราคาพิเศษ → เลือกสถานะ <span class="chip ref">ชำระแล้ว</span> ถ้าได้รับเงินแล้ว หรือ <span class="chip ref">รอตรวจสอบ</span> ถ้ายังไม่ได้เงิน รายการจะติดป้าย "แอดมิน/เซลล์" และตัดที่นั่งจากรอบเดียวกับการจองหน้าเว็บ</li>
+        <li><b>ลงจองแทนลูกค้า (จองผ่านเซลล์/โทร/หน้างาน)</b> — แท็บ 🎟️ การจอง → ฟอร์ม <span class="chip ref">ลงจองแทนลูกค้า</span> ด้านบน → เลือกรอบ กรอกชื่อ-เบอร์-จำนวนคน ปรับยอดได้กรณีราคาพิเศษ → เลือกสถานะ <span class="chip ref">ชำระแล้ว</span> ถ้าได้รับเงินแล้ว หรือ <span class="chip ref">รอตรวจสอบ</span> ถ้ายังไม่ได้เงิน รายการจะติดป้าย "แอดมิน/เซลล์" ระบุชื่อผู้ลงจองในคอลัมน์ "จองโดย" (ดึงจากชื่อที่กรอกตอนล็อกอิน) และตัดที่นั่งจากรอบเดียวกับการจองหน้าเว็บ</li>
+        <li><b>ตรวจสอบย้อนหลัง</b> — แท็บ 📋 ประวัติการใช้งาน แสดงทุกรายการที่มีการเปลี่ยนแปลง (ลงจอง/อนุมัติ/ปฏิเสธ/เช็คชื่อ/ออกใบเซอร์/เปิด-แก้รอบอบรม) พร้อมชื่อผู้ทำรายการและเวลา</li>
         <li><b>เช็คชื่อวันอบรม</b> — แท็บ 🎟️ การจอง → กด <span class="chip ref">เช็คชื่อ</span> ให้รายการที่ลูกค้ามาเข้าเรียนจริง</li>
         <li><b>ออกใบเซอร์</b> — ออกได้เฉพาะรายการที่ <span class="chip ref">ชำระแล้ว</span> → กด <span class="chip ref">ออกใบเซอร์</span> → พิมพ์ชื่อผู้ผ่านอบรม 1 คน/บรรทัด (ใบเซอร์มีอายุ 2 ปีอัตโนมัติ)</li>
       </ol>
@@ -218,17 +234,21 @@ function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg
 async function api(action, body={}, needKey=true){
   const headers = {'Content-Type':'application/json','Authorization':'Bearer '+ANON,'apikey':ANON};
   if(needKey) headers['x-admin-key'] = sessionStorage.getItem('bcprAdminKey') || '';
-  const res = await fetch(API, {method:'POST', headers, body: JSON.stringify({action, ...body})});
+  const actor = sessionStorage.getItem('bcprActorName') || '';
+  const res = await fetch(API, {method:'POST', headers, body: JSON.stringify({action, actor, ...body})});
   const data = await res.json().catch(()=>({ok:false,error:'BAD_RESPONSE'}));
   if(res.status===401){ logout(); throw new Error('UNAUTHORIZED'); }
   return data;
 }
 
 async function login(){
+  const actor = document.getElementById('actorName').value.trim();
   const key = document.getElementById('adminKey').value.trim();
+  if(!actor) return toast('กรุณากรอกชื่อผู้ใช้งาน');
   if(!key) return;
   document.getElementById('loginMsg').textContent = 'กำลังตรวจสอบ…';
   sessionStorage.setItem('bcprAdminKey', key);
+  sessionStorage.setItem('bcprActorName', actor);
   try{
     const r = await api('admin_ping');
     if(r.ok){ enterApp(); return; }
@@ -238,6 +258,7 @@ async function login(){
 }
 function logout(){
   sessionStorage.removeItem('bcprAdminKey');
+  sessionStorage.removeItem('bcprActorName');
   document.getElementById('appView').style.display='none';
   document.getElementById('loginView').style.display='block';
   document.getElementById('btnLogout').style.display='none';
@@ -247,13 +268,16 @@ function enterApp(){
   document.getElementById('loginView').style.display='none';
   document.getElementById('appView').style.display='block';
   document.getElementById('btnLogout').style.display='inline-block';
+  document.getElementById('actorTag').textContent = sessionStorage.getItem('bcprActorName') || '';
+  document.getElementById('actorTag').style.display = 'inline-block';
   loadClasses(); loadBookings(); loadCerts();
 }
 function showTab(name){
-  for(const t of ['classes','bookings','certs','help']){
+  for(const t of ['classes','bookings','certs','audit','help']){
     document.getElementById('view-'+t).style.display = t===name?'block':'none';
     document.getElementById('tab-'+t).classList.toggle('active', t===name);
   }
+  if(name==='audit') loadAuditLog();
 }
 
 /* ---------- classes ---------- */
@@ -338,6 +362,7 @@ async function loadBookings(){
   document.querySelector('#tblBookings tbody').innerHTML = r.bookings.map(b=>`<tr>
     <td class="muted">${thDateTime(b.created_at)}</td>
     <td><b>${esc(b.name)}</b>${b.channel==='class-admin'?'<br><span class="chip done">แอดมิน/เซลล์'+(b.payment_mode&&b.payment_mode!=='promptpay'?' · '+esc(b.payment_mode):'')+'</span>':''}</td>
+    <td>${b.sales_staff?esc(b.sales_staff):'<span class="muted">—</span>'}</td>
     <td>${esc(b.tel)}${b.email?'<br><span class="muted">'+esc(b.email)+'</span>':''}</td>
     <td>${thDate(b.start_date)}<br><span class="muted">${esc(b.time_slot)}</span></td>
     <td>${b.total_people}</td>
@@ -349,7 +374,7 @@ async function loadBookings(){
       ${b.payment_status==='รอตรวจสอบ'?`<button class="btn-ok btn-sm" onclick="setBooking('${b.id}','ชำระแล้ว')">อนุมัติ</button>
       <button class="btn-bad btn-sm" onclick="setBooking('${b.id}','ยกเลิก')">ปฏิเสธ</button>`:''}
       ${b.payment_status==='ชำระแล้ว'?`<button class="btn-gold btn-sm" onclick="openCertModal('${b.id}', ${b.total_people}, '${esc(b.name).replace(/'/g,"\\'")}')">ออกใบเซอร์</button>`:''}
-    </td></tr>`).join('') || '<tr><td colspan="9" class="muted">ยังไม่มีการจอง</td></tr>';
+    </td></tr>`).join('') || '<tr><td colspan="10" class="muted">ยังไม่มีการจอง</td></tr>';
 }
 async function setBooking(id, status){
   const msg = status==='ชำระแล้ว' ? 'ยืนยันว่าได้รับชำระเงินแล้ว?' : 'ปฏิเสธการจองนี้? (ที่นั่งจะถูกคืน)';
@@ -402,6 +427,36 @@ async function revokeCert(code){
   if(!confirm('เพิกถอนใบเซอร์ '+code+' ?')) return;
   const r = await api('admin_revoke_cert', {code});
   r.ok ? (toast('เพิกถอนแล้ว'), loadCerts()) : toast('ผิดพลาด');
+}
+
+/* ---------- audit log ---------- */
+const AUDIT_LABELS = {
+  create_booking: 'ลงจองแทนลูกค้า', update_booking: 'แก้ไขการจอง',
+  approve_booking: 'อนุมัติการจอง', reject_booking: 'ปฏิเสธการจอง',
+  mark_attended: 'เช็คชื่อ', create_class: 'เปิดรอบอบรม', update_class: 'แก้ไขรอบอบรม',
+  issue_cert: 'ออกใบเซอร์', revoke_cert: 'เพิกถอนใบเซอร์',
+};
+function auditDetail(e){
+  const parts = [];
+  if(e.booking_id) parts.push('จอง '+e.booking_id);
+  if(e.class_id) parts.push('รอบ '+e.class_id);
+  if(e.cert_code) parts.push(e.cert_code);
+  if(e.detail && typeof e.detail === 'object'){
+    if(e.detail.name) parts.push(esc(e.detail.name));
+    if(e.detail.payment_status) parts.push('สถานะ: '+esc(e.detail.payment_status));
+  }
+  return parts.join(' · ') || '<span class="muted">—</span>';
+}
+async function loadAuditLog(){
+  const r = await api('admin_list_audit_log');
+  if(!r.ok) return toast('โหลดประวัติไม่สำเร็จ');
+  document.querySelector('#tblAudit tbody').innerHTML = r.entries.map(e=>`<tr>
+    <td class="muted">${thDateTime(e.created_at)}</td>
+    <td><b>${esc(e.actor||'(ไม่ระบุ)')}</b></td>
+    <td>${esc(AUDIT_LABELS[e.action]||e.action)}</td>
+    <td class="muted">${e.booking_id?esc(e.booking_id):(e.class_id?esc(e.class_id):(e.cert_code?esc(e.cert_code):'—'))}</td>
+    <td class="muted">${auditDetail(e)}</td>
+    </tr>`).join('') || '<tr><td colspan="5" class="muted">ยังไม่มีประวัติ</td></tr>';
 }
 
 /* auto-login if key stored */
