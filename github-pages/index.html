@@ -174,14 +174,14 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
   </div>
   <div class="course-filter" aria-label="กรองตามประเภทหลักสูตร">
     <button class="filter-button is-active" type="button" data-filter="all" aria-pressed="true">ทุกหลักสูตร <span>17</span></button>
-    <button class="filter-button" type="button" data-filter="0" aria-pressed="false">ACLS</button>
-    <button class="filter-button" type="button" data-filter="1" aria-pressed="false">Workshop</button>
-    <button class="filter-button" type="button" data-filter="2" aria-pressed="false">BLS / CPR</button>
-    <button class="filter-button" type="button" data-filter="3" aria-pressed="false">หลักสูตรอื่น</button>
+    <button class="filter-button" type="button" data-filter="0" aria-pressed="false">เริ่มต้น: BLS / CPR</button>
+    <button class="filter-button" type="button" data-filter="1" aria-pressed="false">ทักษะเสริม</button>
+    <button class="filter-button" type="button" data-filter="2" aria-pressed="false">Workshop</button>
+    <button class="filter-button" type="button" data-filter="3" aria-pressed="false">ACLS ขั้นสูง</button>
   </div>
 </section>
 
-<div class="group-title">ACLS — หลักสูตรขั้นสูง</div><div class="course-grid">
+<div class="group-title" data-level="advanced">04 — ACLS หลักสูตรขั้นสูง</div><div class="course-grid">
 <div class="course-card">
   <div class="card-header"><h3>ACLS Full Course</h3><div class="tag">การช่วยฟื้นคืนชีวิตขั้นสูง</div></div>
   <div class="card-body"><p>หลักสูตร ACLS ครบวงจร — BLS, Airway, ECG, Drug, Defib, Megacode พร้อมสอบปฏิบัติ</p><div class="card-meta">2 วัน (16 ชม.) | 6-8 คน/รอบ | 9,900 บาท</div></div>
@@ -206,7 +206,7 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
   <div class="card-header"><h3>ACLS Team Member</h3><div class="tag">สมาชิกทีมช่วยชีวิต</div></div>
   <div class="card-body"><p>ฝึกบทบาท Team Member — CPR, Airway, IV, Drug, Monitor</p><div class="card-meta">1 วัน (8 ชม.) | 8-16 คน/รอบ</div></div>
   <a href="05_acls_team.html" class="card-btn">ดูรายละเอียด →</a>
-</div></div><div class="group-title">Workshop เฉพาะทาง</div><div class="course-grid">
+</div></div><div class="group-title" data-level="workshop">03 — Workshop เฉพาะทาง</div><div class="course-grid">
 <div class="course-card">
   <div class="card-header"><h3>Emergency Airway Workshop</h3><div class="tag">จัดการทางเดินหายใจ</div></div>
   <div class="card-body"><p>OPA, NPA, Bag-Mask, Intubation, LMA — ฝึกจริงทุกเทคนิค</p><div class="card-meta">4 ชม. | 6-12 คน/รอบ | 2,900 บาท</div></div>
@@ -221,7 +221,7 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
   <div class="card-header"><h3>Emergency Vascular Access</h3><div class="tag">เปิดเส้นเลือดฉุกเฉิน</div></div>
   <div class="card-body"><p>ฝึกเปิดเส้น IV + IO Access + เตรียมยา</p><div class="card-meta">3 ชม. | 6-12 คน/รอบ | 2,500 บาท</div></div>
   <a href="08_vascular.html" class="card-btn">ดูรายละเอียด →</a>
-</div></div><div class="group-title">BLS / CPR &amp; AED</div><div class="course-grid">
+</div></div><div class="group-title" data-level="starter">01 — เริ่มต้น: BLS / CPR &amp; AED</div><div class="course-grid">
 <div class="course-card">
   <div class="card-header" style="background:linear-gradient(135deg,#1A2B5C,#0E1A3E)"><h3>B-CPR <span style="color:#F5C518">สพฉ.</span></h3><div class="tag">การช่วยชีวิตขั้นพื้นฐานสำหรับประชาชน</div></div>
   <div class="card-body"><p>CPR + AED + ช่วยผู้สำลัก — พร้อมใบรับรอง สพฉ. จองออนไลน์ได้</p><div class="card-meta">3 ชม. | 600 บาท/ท่าน | ศูนย์ LC210002</div></div>
@@ -246,7 +246,7 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
   <div class="card-header"><h3>CPR &amp; AED Layrescuer</h3><div class="tag">CPR &amp; AED กระชับ</div></div>
   <div class="card-body"><p>เน้น CPR + AED อย่างเดียว กระชับ</p><div class="card-meta">2 ชม. | 10-60 คน/รอบ</div></div>
   <a href="12_cpr_aed.html" class="card-btn">ดูรายละเอียด →</a>
-</div></div><div class="group-title">หลักสูตรอื่นๆ</div><div class="course-grid">
+</div></div><div class="group-title" data-level="foundation">02 — ทักษะเสริมสำหรับการทำงาน</div><div class="course-grid">
 <div class="course-card">
   <div class="card-header"><h3>AED Class Corporate</h3><div class="tag">AED สำหรับองค์กร</div></div>
   <div class="card-body"><p>สอนพนักงานใช้ AED + Emergency Action Plan</p><div class="card-meta">2-3 ชม. | 10-60 คน/รอบ</div></div>
@@ -299,11 +299,20 @@ ul.highlights,ul.check-list{list-style:none;padding-left:0}
 <script>
   (() => {
     const buttons = [...document.querySelectorAll('.filter-button')];
-    const groups = [...document.querySelectorAll('.group-title')].map((title, index) => ({
-      title,
-      grid: title.nextElementSibling,
+    const learningOrder = ['starter', 'foundation', 'workshop', 'advanced'];
+    const groupsByLevel = new Map([...document.querySelectorAll('.group-title')].map((title) => [
+      title.dataset.level,
+      { title, grid: title.nextElementSibling }
+    ]));
+    const experience = document.querySelector('.experience');
+    learningOrder.forEach((level) => {
+      const group = groupsByLevel.get(level);
+      if (group) experience.before(group.title, group.grid);
+    });
+    const groups = learningOrder.map((level, index) => ({
+      ...groupsByLevel.get(level),
       index: String(index)
-    }));
+    })).filter(({ title, grid }) => title && grid);
     buttons.forEach((button) => {
       button.addEventListener('click', () => {
         const filter = button.dataset.filter;
