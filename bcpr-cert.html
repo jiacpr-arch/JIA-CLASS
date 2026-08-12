@@ -44,13 +44,16 @@ a{color:var(--navy)}
   padding:70px 80px;text-align:center;font-family:'Sarabun',sans-serif;color:var(--ink);
   display:flex;flex-direction:column;justify-content:space-between;
 }
+.sheet .seal{width:60px;height:60px;border-radius:50%;background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85em;margin:0 auto 8px;border:2px solid var(--gold)}
 .sheet .org{font-size:1.15em;font-weight:700;color:var(--navy)}
 .sheet .org small{display:block;font-weight:400;color:#5B6B90;font-size:.75em}
-.sheet .present{font-size:1em;color:#5B6B90;margin-top:14px}
-.sheet .lname{font-size:2.6em;font-weight:700;color:var(--navy);border-bottom:3px solid var(--gold);display:inline-block;padding:0 34px 6px;margin:10px auto}
-.sheet .ctitle{font-size:1.25em;font-weight:600;margin-top:10px}
+.sheet .present{font-size:1em;color:#5B6B90;margin-top:10px;line-height:1.5}
+.sheet .lname{font-size:2.6em;font-weight:700;color:var(--navy);border-bottom:3px solid var(--gold);display:inline-block;padding:0 34px 6px;margin:8px auto}
+.sheet .ctitle{font-size:1.25em;font-weight:600;margin-top:8px}
 .sheet .ctitle small{display:block;font-weight:400;font-size:.8em;color:#5B6B90}
-.sheet .meta{display:flex;justify-content:space-between;align-items:flex-end;margin-top:26px;text-align:left}
+.sheet .sign{margin-top:16px;font-size:.85em;color:#5B6B90;display:flex;flex-direction:column;align-items:center}
+.sheet .sign .line{width:230px;border-bottom:1px solid #5B6B90;height:26px}
+.sheet .meta{display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px;text-align:left}
 .sheet .meta .qr{background:#fff;padding:6px;border:1px solid var(--line)}
 .sheet .meta .ids{font-size:.9em;color:#5B6B90;text-align:right}
 .sheet .meta .ids b{color:var(--ink)}
@@ -93,15 +96,20 @@ a{color:var(--navy)}
 <div id="certSheet">
   <div class="sheet">
     <div>
+      <div class="seal">สพฉ.</div>
       <div class="org">บริษัท เจี่ยรักษา จำกัด — JIA TRAINER CENTER
         <small>ศูนย์การเรียนรู้ชุมชนที่ได้รับการรับรองจากสถาบันการแพทย์ฉุกเฉินแห่งชาติ (สพฉ.) เลขที่ศูนย์ LC210002</small>
       </div>
-      <div class="present">ขอมอบใบรับรองผลการฝึกอบรมนี้ไว้เพื่อแสดงว่า</div>
+      <div class="present">ขอมอบใบรับรองผลการฝึกอบรมนี้ไว้<br>เพื่อแสดงว่า</div>
       <div class="lname" id="pName">—</div>
       <div class="ctitle">ได้ผ่านการฝึกอบรม หลักสูตรการกู้ชีพขั้นพื้นฐาน
         <small>(Basic Cardiopulmonary Resuscitation: B-CPR)</small>
       </div>
       <div class="present" id="pIssued">ออกให้ ณ วันที่ —</div>
+      <div class="sign">
+        <div class="line"></div>
+        <div>เลขาธิการสถาบันการแพทย์ฉุกเฉินแห่งชาติ หรือผู้อำนวยการฝึกอบรม</div>
+      </div>
     </div>
     <div class="meta">
       <div class="qr" id="pQr"></div>
@@ -123,6 +131,7 @@ const API = "https://tpoiyykbgsgnrdwzgzvn.supabase.co/functions/v1/bcpr-api";
 const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwb2l5eWtiZ3NnbnJkd3pnenZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NTUwMDIsImV4cCI6MjA5MDIzMTAwMn0.c7Ow_20mpmcDqDdMQ5qnsDV6-RKAO-7-eM1y-EsEXdA";
 const THMONF=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 function thDateFull(iso){ const d=new Date(iso); return `${d.getDate()} ${THMONF[d.getMonth()]} พ.ศ. ${d.getFullYear()+543}`; }
+function thDateOfficial(iso){ const d=new Date(iso); return `ออกให้ ณ วันที่ ${d.getDate()} เดือน ${THMONF[d.getMonth()]} พ.ศ. ${d.getFullYear()+543}`; }
 function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 async function verify(code){
@@ -186,7 +195,7 @@ async function doVerify(){
 
 function fillSheet(c){
   document.getElementById('pName').textContent = c.learner_name;
-  document.getElementById('pIssued').textContent = 'ออกให้ ณ วันที่ ' + thDateFull(c.issued_at);
+  document.getElementById('pIssued').textContent = thDateOfficial(c.issued_at);
   document.getElementById('pCode').textContent = c.code;
   document.getElementById('pExpire').textContent = thDateFull(c.expires_at);
   const qrEl = document.getElementById('pQr');
