@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>จองคอร์ส B-CPR ออนไลน์ | JIA TRAINER CENTER</title>
 <meta name="description" content="จองคอร์สอบรม B-CPR การช่วยชีวิตขั้นพื้นฐานสำหรับประชาชน ออนไลน์ — เลือกรอบ ชำระเงิน แนบสลิป 600 บาท/ท่าน">
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
 :root{
@@ -43,7 +42,6 @@ input,textarea{font-family:inherit;font-size:1em;padding:11px 13px;border:1px so
 .total{background:#EEF2FB;border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:14px}
 .total b{font-size:1.4em;color:var(--navy)}
 .qr-box{text-align:center;padding:10px}
-.qr-box #qrcode{display:inline-block;padding:14px;background:#fff;border:2px solid var(--line);border-radius:12px}
 .qr-box .pp-name{font-weight:600;margin-top:8px}
 .qr-amount{font-size:1.2em;font-weight:700;color:var(--navy)}
 .notice{border-radius:10px;padding:12px 16px;font-size:.92em;margin:10px 0}
@@ -152,12 +150,11 @@ const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const THDAY=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const THMON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
-let config = { price: 600, promptpay_id: 'PLACEHOLDER', promptpay_name: '' };
+let config = { price: 600 };
 let classes = [];
 let selectedClass = null;
 let people = 1;
 let slipData = null; // {base64, mime}
-let qrObj = null;
 
 function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function thDate(iso){ const d=new Date(iso+'T00:00:00');
@@ -168,30 +165,6 @@ async function api(action, body={}){
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+ANON,'apikey':ANON},
     body: JSON.stringify({action, ...body})});
   return res.json();
-}
-
-/* ---------- PromptPay EMVCo payload ---------- */
-function tlv(id, value){ return id + String(value.length).padStart(2,'0') + value; }
-function crc16(str){
-  let crc = 0xFFFF;
-  for(let i=0;i<str.length;i++){
-    crc ^= str.charCodeAt(i) << 8;
-    for(let j=0;j<8;j++) crc = (crc & 0x8000) ? ((crc<<1) ^ 0x1021) & 0xFFFF : (crc<<1) & 0xFFFF;
-  }
-  return crc.toString(16).toUpperCase().padStart(4,'0');
-}
-function promptpayPayload(id, amount){
-  const digits = id.replace(/[^0-9]/g,'');
-  let acct;
-  if(digits.length===13){ acct = tlv('02', digits); }              // เลขผู้เสียภาษี/บัตรประชาชน
-  else if(digits.length===15){ acct = tlv('03', digits); }         // e-wallet
-  else { acct = tlv('01', '0066' + digits.replace(/^0/,'')); }     // เบอร์โทร
-  const merchant = tlv('29', tlv('00','A000000677010111') + acct);
-  let p = tlv('00','01') + tlv('01','11') + merchant + tlv('53','764');
-  if(amount > 0) p += tlv('54', amount.toFixed(2));
-  p += tlv('58','TH');
-  p += '6304';
-  return p + crc16(p);
 }
 
 /* ---------- UI ---------- */
@@ -231,25 +204,17 @@ function updateTotal(){
 function renderPay(){
   const area = document.getElementById('payArea');
   const total = config.price * people;
-  if(config.promptpay_id === 'PLACEHOLDER'){
-    area.innerHTML = `<div class="notice warn"><b>ระบบชำระเงินออนไลน์อยู่ระหว่างเปิดใช้งาน</b><br>
-      กรุณาจองผ่าน LINE <a href="https://line.me/R/ti/p/@jiacpr"><b>@jiacpr</b></a> ไปก่อน ขออภัยในความไม่สะดวก</div>`;
-    document.getElementById('btnSubmit').disabled = true;
-    return;
-  }
   document.getElementById('btnSubmit').disabled = false;
   if(!selectedClass){
     area.innerHTML = '<p class="muted">เลือกรอบอบรมก่อนเพื่อแสดง QR ชำระเงิน</p>';
     return;
   }
   area.innerHTML = `<div class="qr-box">
-      <div id="qrcode"></div>
-      <div class="pp-name">${esc(config.promptpay_name)}</div>
-      <div class="qr-amount">ยอดโอน ${total.toLocaleString()} บาท</div>
-      <p class="muted">สแกนด้วยแอปธนาคาร แล้วเก็บสลิปไว้แนบในขั้นตอนถัดไป</p>
+      <img src="bcpr-promptpay-qr.jpg" alt="พร้อมเพย์ บริษัท เจี่ยรักษา จำกัด" style="max-width:260px;width:100%;border-radius:12px;border:2px solid var(--line)">
+      <div class="pp-name">บัญชี: บริษัท เจี่ยรักษา จำกัด (เจี่ยรักษา)</div>
+      <div class="qr-amount">โอน ${total.toLocaleString()} บาท</div>
+      <p class="muted">สแกนด้วยแอปธนาคาร แล้ว<b>พิมพ์ยอดเงิน ${total.toLocaleString()} บาท เอง</b><br>จากนั้นเก็บสลิปไว้แนบในขั้นตอนถัดไป</p>
     </div>`;
-  const payload = promptpayPayload(config.promptpay_id, total);
-  qrObj = new QRCode(document.getElementById('qrcode'), {text: payload, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M});
 }
 
 /* ---------- slip ---------- */
@@ -318,7 +283,7 @@ async function submitBooking(){
     msg.style.color = 'var(--bad)';
     msg.textContent = 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่ หรือจองผ่าน LINE @jiacpr';
   }finally{
-    btn.disabled = config.promptpay_id === 'PLACEHOLDER';
+    btn.disabled = false;
   }
 }
 
