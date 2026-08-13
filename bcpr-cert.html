@@ -36,38 +36,70 @@ a{color:var(--navy)}
 .footer{text-align:center;font-size:.85em;color:#7A88A8;padding:22px 16px}
 .printbar{text-align:center;margin:14px 0}
 
-/* ---------- printable certificate (A4 landscape) ---------- */
-#certSheet{display:none}
+/* ---------- printable certificate (A4 landscape) ----------
+   ขนาดทุกอย่างในใบเซอร์เป็น em ทั้งหมด โดยมี font-size ของ .sheet เป็น "ตัวคูณสเกล"
+   ที่ผูกกับความกว้างกระดาษจริง (container query) — ห้ามใช้ vh/vw เพราะบนมือถือ
+   ค่าพวกนี้อ้างอิงขนาดจอ ไม่ใช่ขนาดกระดาษ ทำให้ใบเซอร์ล้นไปหน้า 2
+   1122px = ความกว้าง A4 แนวนอนที่ 96dpi = 70.125em เมื่อ 1em = 16px */
+#certSheet{display:none;container-type:inline-size}
+.sheetWrap{width:100%;max-width:1122px;margin:20px auto}
 .sheet{
-  width:1122px;height:793px;margin:20px auto;background:#fff;position:relative;
-  border:14px solid var(--navy);outline:3px solid var(--gold);outline-offset:-22px;
-  padding:70px 80px;text-align:center;font-family:'Sarabun',sans-serif;color:var(--ink);
+  width:100%;aspect-ratio:1122/793;background:#fff;position:relative;overflow:hidden;
+  font-size:min(1rem, calc(100cqw / 70.125));
+  border:.875em solid var(--navy);outline:.1875em solid var(--gold);outline-offset:-1.375em;
+  padding:4.375em 5em;text-align:center;font-family:'Sarabun',sans-serif;color:var(--ink);
   display:flex;flex-direction:column;justify-content:space-between;
+  break-inside:avoid;page-break-inside:avoid;
 }
-.sheet .seal{width:105px;height:105px;border-radius:50%;background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.3em;margin:0 auto 12px;border:2px solid var(--gold);overflow:hidden}
+.sheet .seal{width:5.05em;height:5.05em;border-radius:50%;background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.3em;margin:0 auto .58em;border:.1em solid var(--gold);overflow:hidden}
 .sheet .seal.has-img{background:#fff}
 .sheet .seal img{width:100%;height:100%;object-fit:contain;display:none}
 .sheet .org{font-size:1.15em;font-weight:700;color:var(--navy)}
 .sheet .org small{display:block;font-weight:400;color:#5B6B90;font-size:.75em}
-.sheet .present{font-size:1em;color:#5B6B90;margin-top:10px;line-height:1.5}
-.sheet .lname{font-size:2.6em;font-weight:700;color:var(--navy);border-bottom:3px solid var(--gold);display:inline-block;padding:0 34px 6px;margin:8px auto}
-.sheet .ctitle{font-size:1.25em;font-weight:600;margin-top:8px}
+.sheet .present{font-size:1em;color:#5B6B90;margin-top:.625em;line-height:1.5}
+.sheet .lname{font-size:2.6em;font-weight:700;color:var(--navy);border-bottom:.072em solid var(--gold);display:inline-block;padding:0 .82em .145em;margin:.19em auto}
+.sheet .ctitle{font-size:1.25em;font-weight:600;margin-top:.4em}
 .sheet .ctitle small{display:block;font-weight:400;font-size:.8em;color:#5B6B90}
-.sheet .sign{margin-top:16px;font-size:.85em;color:#5B6B90;display:flex;flex-direction:column;align-items:center}
-.sheet .sign .line{width:230px;border-bottom:1px solid #5B6B90;height:26px}
-.sheet .meta{display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px;text-align:left}
-.sheet .meta .qr{background:#fff;padding:6px;border:1px solid var(--line)}
+.sheet .sign{margin-top:1.176em;font-size:.85em;color:#5B6B90;display:flex;flex-direction:column;align-items:center}
+.sheet .sign .line{width:16.9em;border-bottom:.074em solid #5B6B90;height:1.91em}
+.sheet .meta{display:flex;justify-content:space-between;align-items:flex-end;margin-top:1.25em;text-align:left}
+.sheet .meta .qr{background:#fff;padding:.375em;border:.0625em solid var(--line);line-height:0}
+.sheet .meta .qr canvas,.sheet .meta .qr img{display:block;width:6em;height:6em}
 .sheet .meta .ids{font-size:.9em;color:#5B6B90;text-align:right}
 .sheet .meta .ids b{color:var(--ink)}
+/* ย่อใบเซอร์เหลือ 95% ของความกว้างที่พิมพ์ได้ เพราะเครื่องพิมพ์/มือถือมักบังคับขอบกระดาษ
+   ของตัวเอง (ความสูงที่เหลือหดเร็วกว่าความกว้าง) ถ้าใช้เต็ม 100% จะล้นไปหน้า 2 */
 @media print{
-  body{background:#fff}
+  html,body{background:#fff !important;margin:0;padding:0}
   .hero,.container,.footer,.printbar{display:none !important}
   #certSheet{display:block !important}
-  .sheet{margin:0;width:100%;height:100vh;border-width:12px}
+  .sheetWrap{max-width:none;margin:0}
+  .sheet{
+    width:95cqw;margin:0 auto;border-width:.75em;
+    font-size:min(1rem, calc(95cqw / 70.125));
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
   @page{size:A4 landscape;margin:0}
 }
+/* มือถือ (Chrome/Safari บน Android/iOS) ไม่รองรับ @page size → ได้กระดาษแนวตั้งเสมอ
+   จึงหมุนใบเซอร์ 90° ลงบนกระดาษแนวตั้ง แทนที่จะปล่อยให้ล้นไปหน้า 2
+   ตั้ง class .rotate-print จาก JS เพราะ media query orientation ใน print ของ Chromium
+   รายงานเป็นแนวตั้งเสมอ (อ้างอิงขนาดกระดาษ ไม่ใช่หน้าที่พิมพ์จริง) จึงเช็คไม่ได้
+   ส่วน max-width กันกรณีผู้ใช้เลือกกระดาษแนวนอนเอง → ไม่ต้องหมุน
+   90% เผื่อขอบกระดาษ ครอบคลุมทั้ง A4 และ Letter แนวตั้ง */
+@media print and (max-width:250mm){
+  .rotate-print .sheetWrap{position:relative;overflow:hidden;width:90cqw;margin:0 auto;height:calc(90cqw * 1122 / 793)}
+  .rotate-print .sheet{
+    position:absolute;top:0;left:0;aspect-ratio:auto;
+    width:calc(90cqw * 1122 / 793);height:90cqw;
+    font-size:min(1rem, calc(90cqw * 1122 / 793 / 70.125));
+    /* หมุนทวนเข็มนาฬิกา: หัวใบเซอร์อยู่ขอบซ้ายของกระดาษ (แบบเดียวกับที่เครื่องพิมพ์
+       หมุนงานแนวนอนลงกระดาษแนวตั้ง) หมุนกระดาษตามเข็มนาฬิกาแล้วอ่านได้ตามปกติ */
+    transform:translateY(calc(90cqw * 1122 / 793)) rotate(-90deg);transform-origin:top left;
+  }
+}
 @media screen{
-  #certSheet.showOnScreen{display:block;overflow-x:auto}
+  #certSheet.showOnScreen{display:block}
 }
 </style>
 <link rel="stylesheet" href="theme.css?v=desktop-grid-20260812">
@@ -97,6 +129,7 @@ a{color:var(--navy)}
 
 <!-- printable sheet -->
 <div id="certSheet">
+  <div class="sheetWrap">
   <div class="sheet">
     <div>
       <div class="seal" id="pSeal"><img id="pSealImg" src="niems-seal.png" alt="ตราสถาบันการแพทย์ฉุกเฉินแห่งชาติ (สพฉ.)"><span id="pSealText">JIA</span></div>
@@ -122,6 +155,7 @@ a{color:var(--navy)}
         <span style="font-size:.85em">ตรวจสอบได้ที่หน้าเว็บนี้ หรือสแกน QR</span>
       </div>
     </div>
+  </div>
   </div>
 </div>
 
@@ -188,12 +222,21 @@ async function doVerify(){
       document.getElementById('printBar').style.display='block';
       if(new URLSearchParams(location.search).get('print')==='1'){
         document.getElementById('certSheet').classList.add('showOnScreen');
-        setTimeout(()=>window.print(), 600);
+        whenPrintable().then(()=>window.print());
       }
     }
   }catch(e){
     card.innerHTML = '<p class="status-bad">เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่</p>';
   }
+}
+
+/* รอฟอนต์ + รูป (ตรา สพฉ. และ QR) โหลดครบก่อนสั่งพิมพ์อัตโนมัติ
+   ถ้าสั่งพิมพ์เร็วเกินไป ใบเซอร์จะออกมาฟอนต์ผิดขนาดหรือ QR หาย (กันไว้ที่ 3 วินาที) */
+function whenPrintable(){
+  const imgs = [...document.querySelectorAll('#certSheet img')].filter(i=>!i.complete)
+    .map(i=>new Promise(done=>{i.addEventListener('load',done,{once:true});i.addEventListener('error',done,{once:true})}));
+  const ready = Promise.all([document.fonts ? document.fonts.ready : null, ...imgs]);
+  return Promise.race([ready, new Promise(done=>setTimeout(done,3000))]);
 }
 
 function fillSheet(c){
@@ -220,8 +263,21 @@ function fillSheet(c){
 
   const qrEl = document.getElementById('pQr');
   qrEl.innerHTML = '';
+  qrEl.style.display = '';
   const verifyUrl = location.origin + location.pathname + '?code=' + encodeURIComponent(c.code);
-  new QRCode(qrEl, {text: verifyUrl, width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M});
+  // ถ้าไลบรารี QR (CDN) โหลดไม่ได้ ต้องยังพิมพ์ใบเซอร์ได้ตามปกติ แค่ไม่มี QR
+  try{
+    new QRCode(qrEl, {text: verifyUrl, width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M});
+  }catch(e){
+    qrEl.style.display = 'none';
+  }
+}
+
+/* มือถือ/แท็บเล็ตไม่รองรับ @page{size:A4 landscape} → พิมพ์ลงกระดาษแนวตั้งเสมอ
+   ติด class ไว้ให้ CSS หมุนใบเซอร์ 90° แทน ใบเซอร์จะได้อยู่หน้าเดียวเต็มหน้า */
+if(/Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i.test(navigator.userAgent)
+   || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform))){  /* iPadOS แสดงตัวเป็น Mac */
+  document.documentElement.classList.add('rotate-print');
 }
 
 /* init from ?code= */
