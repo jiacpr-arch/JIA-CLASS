@@ -223,7 +223,9 @@ async function runPendingSlipsJob(dryRun: boolean): Promise<Response> {
 // งานตั้งเวลา: รายงานรอบเรียนที่จะเริ่มในอีก CLASS_REMINDER_DAYS_AHEAD วัน พร้อมรายชื่อ+เบอร์นักเรียน
 // ให้ทีมงานตามลูกค้าเอง — รอบที่ยังไม่มีคนจองเลยจะไม่ถูกรวมในรายงาน (ไม่มีอะไรให้ตาม)
 async function runClassReminderJob(dryRun: boolean): Promise<Response> {
-  const target = new Date(Date.now() + CLASS_REMINDER_DAYS_AHEAD * 86400000).toISOString().slice(0, 10);
+  // นับวันจาก "วันนี้ตามเวลาไทย" (UTC+7) — ถ้าใช้วันที่ UTC ตรงๆ แล้วมีคนกดรันเองช่วงเที่ยงคืน–07:00 น.
+  // จะได้วันเป้าหมายคลาดไป 1 วัน (ตอน cron รัน 08:00 น. ไทยค่าตรงกันพอดีเลยไม่เคยเห็นปัญหา)
+  const target = new Date(Date.now() + 7 * 3600 * 1000 + CLASS_REMINDER_DAYS_AHEAD * 86400000).toISOString().slice(0, 10);
 
   // เฉพาะคอร์สของระบบ class.morroo.com (cert_prefix is not null) กันชนกับ cpr.morroo.com
   const { data: courses } = await supa.from("courses").select("key,label").not("cert_prefix", "is", null);

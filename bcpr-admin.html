@@ -378,7 +378,9 @@ async function loadClasses(){
   if(!r.ok) return toast('โหลดรอบอบรมไม่สำเร็จ');
   allClasses = r.classes;
 
-  const today = new Date().toISOString().slice(0,10);
+  /* วันที่เครื่องผู้ใช้ (ไม่ใช่ UTC) — ถ้าใช้ toISOString ตรงๆ ช่วงเที่ยงคืน–07:00 น. จะได้วันเมื่อวาน */
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const open = r.classes.filter(c=>c.status==='ready' && c.date>=today);
   const cur = document.getElementById('mbClass').value;
   document.getElementById('mbClass').innerHTML = '<option value="">— เลือกรอบเรียน —</option>' +
