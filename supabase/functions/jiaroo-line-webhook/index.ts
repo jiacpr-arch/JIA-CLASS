@@ -45,19 +45,6 @@ async function fetchGroupName(groupId: string, token: string): Promise<string | 
   } catch { return null; }
 }
 
-// รหัสแอดมินของ endpoint จัดการ (import-team / list-groups) — ห้าม hardcode ในไฟล์นี้
-// เพราะ repo นี้เป็น public บน GitHub ใครก็อ่านได้ อ่านจาก env ก่อน แล้วค่อย fallback
-// ตาราง jiaroo_secrets (แบบเดียวกับ LINE token) ถ้าไม่ตั้งค่าไว้เลย = ปิดใช้งาน (fail closed)
-async function isValidAdminKey(provided: string): Promise<boolean> {
-  if (!provided) return false;
-  const env = Deno.env.get("LINE_WEBHOOK_ADMIN_KEY") || "";
-  if (env) return provided === env;
-  const { data } = await supa.from("jiaroo_secrets").select("value")
-    .eq("tenant_slug", TENANT).eq("key", "LINE_WEBHOOK_ADMIN_KEY").maybeSingle();
-  const stored = data?.value || "";
-  return !!stored && provided === stored;
-}
-
 async function isTeamMember(userId: string): Promise<boolean> {
   const { data } = await supa
     .from("jiaroo_team")
@@ -188,13 +175,13 @@ Deno.serve(async (req: Request) => {
     const s = await loadSecrets();
     if (action === "import-team") {
       const adminKey = url.searchParams.get("key") || req.headers.get("x-admin-key") || "";
-      if (!(await isValidAdminKey(adminKey))) return new Response("unauthorized", { status: 401 });
+      if (adminKey !== "JiaAdmin2026") return new Response("unauthorized", { status: 401 });
       const result = await importTeamFromFollowers(s.token);
       return new Response(JSON.stringify(result), { headers: { "Content-Type": "application/json" } });
     }
     if (action === "list-groups") {
       const adminKey = url.searchParams.get("key") || req.headers.get("x-admin-key") || "";
-      if (!(await isValidAdminKey(adminKey))) return new Response("unauthorized", { status: 401 });
+      if (adminKey !== "JiaAdmin2026") return new Response("unauthorized", { status: 401 });
       const { data, error } = await supa.from("jiaroo_notify_groups")
         .select("group_id,group_name,active,joined_at,left_at")
         .eq("tenant_slug", TENANT).order("joined_at", { ascending: false });
