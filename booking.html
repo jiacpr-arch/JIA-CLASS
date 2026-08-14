@@ -163,6 +163,18 @@ const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const THDAY=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const THMON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
+// ที่มาของผู้จอง (utm_source จากเว็บบริวารในเครือ เช่น acls-app, firstaid) — เก็บลง
+// sessionStorage ตั้งแต่เข้าหน้าแรก เพราะ query string อาจหายระหว่าง flow หลายขั้น/รีเฟรช
+const SOURCE_KEY = 'jia_booking_source';
+(function(){
+  const p = new URLSearchParams(location.search);
+  const src = (p.get('utm_source') || p.get('ref') || '').trim().slice(0, 100);
+  if(src) try{ sessionStorage.setItem(SOURCE_KEY, src); }catch(e){}
+})();
+function bookingSource(){
+  try{ return sessionStorage.getItem(SOURCE_KEY) || ''; }catch(e){ return ''; }
+}
+
 let courses = [];
 let selectedCourse = null; // course object
 let classesConfig = { price: 0 };
@@ -332,6 +344,7 @@ async function submitBooking(){
       class_id: selectedClass.id, name, tel, email,
       people, note: document.getElementById('fNote').value.trim(),
       pdpa_consent: true, slip_base64: slipData.base64, slip_mime: slipData.mime,
+      source: bookingSource() || undefined,
     });
     if(r.ok){
       document.getElementById('okBookingId').textContent = r.booking_id;

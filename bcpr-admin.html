@@ -474,7 +474,7 @@ async function loadBookings(){
   document.querySelector('#tblBookings tbody').innerHTML = r.bookings.map(b=>`<tr>
     <td class="muted">${thDateTime(b.created_at)}</td>
     <td>${esc(b.course_name||b.course_type)}</td>
-    <td><b>${esc(b.name)}</b>${isManual(b.channel)?'<br><span class="chip done">แอดมิน/เซลล์'+(b.payment_mode&&b.payment_mode!=='promptpay'?' · '+esc(b.payment_mode):'')+'</span>':''}</td>
+    <td><b>${esc(b.name)}</b>${isManual(b.channel)?'<br><span class="chip done">แอดมิน/เซลล์'+(b.payment_mode&&b.payment_mode!=='promptpay'?' · '+esc(b.payment_mode):'')+'</span>':''}${b.booking_source?'<br><span class="chip off">ที่มา: '+esc(b.booking_source)+'</span>':''}</td>
     <td>${b.sales_staff?esc(b.sales_staff):'<span class="muted">—</span>'}</td>
     <td>${esc(b.tel)}${b.email?'<br><span class="muted">'+esc(b.email)+'</span>':''}</td>
     <td>${thDate(b.start_date)}<br><span class="muted">${esc(b.time_slot)}</span></td>

@@ -148,11 +148,13 @@ function buildText(rec: any, seats: { left: number; max: number } | null): strin
 
   // จองจากเว็บ class.morroo.com — เลือกรอบเรียนและแนบสลิปมาแล้ว ต้องตรวจสลิปเพื่อยืนยัน
   if (CLASS_CHANNELS.includes(channel)) {
+    // booking_source = utm_source ของเว็บบริวารที่ส่งลูกค้ามา (เช่น acls-app, firstaid) — ไม่มี = จองตรง
+    const sourceLine = rec.booking_source ? `ที่มา: ${rec.booking_source}\n` : "";
     return `🔔 มีการจองใหม่จากเว็บ class.morroo.com\n\n` +
       `ชื่อ: ${name}\nเบอร์: ${tel}\nคอร์ส: ${courseName}\n` +
       `รอบเรียน: ${thDate(rec.start_date)} ${timeSlot}\n` +
       `จำนวนคน: ${people}\nยอด: ${price}\n${seatsLine}สถานะ: ${rec.payment_status || "-"}\n` +
-      `โน้ต: ${note}\n\n` +
+      `${sourceLine}โน้ต: ${note}\n\n` +
       `ตรวจสลิปแล้วกดอนุมัติที่ ${CLASS_ADMIN_URL}`;
   }
 
