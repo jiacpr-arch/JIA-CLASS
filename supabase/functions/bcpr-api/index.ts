@@ -1,5 +1,5 @@
 // bcpr-api — backend สำหรับระบบจองคอร์สออนไลน์ของ JIA TRAINER CENTER (หลายคอร์ส)
-// public: list_courses, list_classes, create_booking, verify_cert
+// public: list_courses, list_classes, list_upcoming, create_booking, verify_cert
 // admin (header x-admin-key): จัดการคอร์ส/รอบอบรม/การจอง/ใบเซอร์ — เฉพาะคอร์สที่ cert_prefix ไม่เป็น null
 //   (courses.cert_prefix is not null = คอร์สที่อยู่ในระบบจองนี้; แถว joincourse/privateclass
 //    ของ cpr.morroo.com มี cert_prefix เป็น null เสมอ จึงไม่ถูกดึง/แก้ไขโดยฟังก์ชันนี้เลย)
@@ -110,6 +110,7 @@ const ADMIN_PAGE_URL = "https://class.morroo.com/bcpr-admin.html";
 
 type BookingNotify = {
   source: "web" | "admin";
+  bookingSource?: string; // ที่มาจากเว็บบริวาร (utm_source) เช่น acls-app, firstaid
   bookingId: string;
   courseName: string;
   name: string;
@@ -131,6 +132,7 @@ function notifyText(n: BookingNotify): string {
     `จำนวน: ${n.people} คน | ยอด: ${n.total.toLocaleString("th-TH")} บาท`,
     `สถานะ: ${n.paymentStatus}`,
   ];
+  if (n.bookingSource) lines.push(`ที่มา: ${n.bookingSource}`);
   if (n.note) lines.push(`หมายเหตุ: ${n.note}`);
   lines.push(`เลขที่จอง: ${n.bookingId}`);
   if (n.source === "web") lines.push(`ตรวจสลิป/อนุมัติได้ที่ ${ADMIN_PAGE_URL}`);
@@ -248,6 +250,37 @@ async function listClasses(body: Record<string, unknown>) {
   });
 }
 
+// รอบอบรมที่กำลังจะมาถึงของทุกคอร์สที่เปิดจองออนไลน์ ในคำขอเดียว — สำหรับวิดเจ็ต
+// "รอบเรียนที่เปิดจอง" บนเว็บบริวารในเครือ morroo (ดู docs/WIDGET-API.md)
+// ตอบเฉพาะข้อมูลสาธารณะ ไม่มีข้อมูลผู้จอง — ห้ามเปลี่ยนชื่อ field เดิม (เพิ่มได้อย่างเดียว)
+async function listUpcoming() {
+  const courses = await getManagedCourses();
+  const bookable = courses.filter((c) => c.online_booking);
+  if (!bookable.length) return json({ ok: true, classes: [] });
+  const byKey: Record<string, (typeof bookable)[number]> = {};
+  for (const c of bookable) byKey[c.key] = c;
+  const { data: classes, error } = await db.from("classes")
+    .select("id,course_key,date,time_slot,place,max_students")
+    .in("course_key", bookable.map((c) => c.key))
+    .eq("status", "ready").gte("date", thaiToday())
+    .order("date", { ascending: true }).limit(20);
+  if (error) throw error;
+  const taken = await seatsTaken((classes ?? []).map((c) => c.id));
+  return json({
+    ok: true,
+    classes: (classes ?? []).map((c) => ({
+      class_id: c.id,
+      course_key: c.course_key,
+      label: byKey[c.course_key]?.label ?? c.course_key,
+      price: Number(byKey[c.course_key]?.price ?? 0),
+      date: c.date,
+      time_slot: c.time_slot,
+      place: c.place ?? "",
+      seats_left: Math.max((c.max_students ?? 0) - (taken[c.id] ?? 0), 0),
+    })),
+  });
+}
+
 async function createBooking(body: Record<string, unknown>) {
   const name = String(body.name ?? "").trim();
   const tel = String(body.tel ?? "").trim();
@@ -258,6 +291,9 @@ async function createBooking(body: Record<string, unknown>) {
   const pdpa = body.pdpa_consent === true;
   const slipB64 = String(body.slip_base64 ?? "");
   const slipMime = String(body.slip_mime ?? "");
+  // ที่มาของการจอง (utm_source จากเว็บบริวาร) — ไม่บังคับ, จำกัด charset กันข้อความแปลกปลอม
+  const sourceRaw = String(body.source ?? "").trim().slice(0, 100);
+  const source = /^[a-z0-9_.\-]*$/i.test(sourceRaw) ? sourceRaw : "";
 
   if (!name || name.length > 200) return json({ ok: false, error: "INVALID_NAME" }, 400);
   if (!/^[0-9+\-() ]{8,20}$/.test(tel)) return json({ ok: false, error: "INVALID_TEL" }, 400);
@@ -284,7 +320,7 @@ async function createBooking(body: Record<string, unknown>) {
 
   const { data, error } = await db.rpc("class_create_booking", {
     p_id: bookingId, p_class_id: classId, p_name: name, p_tel: tel, p_email: email,
-    p_people: people, p_note: note, p_slip_path: slipPath,
+    p_people: people, p_note: note, p_slip_path: slipPath, p_source: source || null,
   });
   if (error) {
     await db.storage.from(SLIP_BUCKET).remove([slipPath]).catch(() => {});
@@ -295,7 +331,8 @@ async function createBooking(body: Record<string, unknown>) {
     return json({ ok: false, error: data?.error ?? "BOOKING_FAILED", seats_left: data?.seats_left }, 409);
   }
   notifyNewBooking({
-    source: "web", bookingId, courseName: data.course_name ?? data.course_key ?? "คอร์สอบรม",
+    source: "web", bookingSource: source || undefined,
+    bookingId, courseName: data.course_name ?? data.course_key ?? "คอร์สอบรม",
     name, tel, people, total: Number(data.total ?? 0),
     date: data.date, timeSlot: data.time_slot, paymentStatus: "รอตรวจสอบสลิป", note,
   });
@@ -436,7 +473,7 @@ async function adminUpdateClass(body: Record<string, unknown>) {
 
 async function adminListBookings(body: Record<string, unknown>) {
   let q = db.from("bookings")
-    .select("id,name,tel,email,class_id,channel,course_type,course_name,total_people,final_price,payment_mode,payment_slip,payment_status,start_date,time_slot,note,attended_at,created_at,sales_staff")
+    .select("id,name,tel,email,class_id,channel,booking_source,course_type,course_name,total_people,final_price,payment_mode,payment_slip,payment_status,start_date,time_slot,note,attended_at,created_at,sales_staff")
     .in("channel", CHANNELS).order("created_at", { ascending: false }).limit(500);
   if (body.class_id) q = q.eq("class_id", String(body.class_id));
   if (body.course_key) q = q.eq("course_type", String(body.course_key));
@@ -640,6 +677,7 @@ Deno.serve(async (req: Request) => {
     // public
     if (action === "list_courses") return await listCourses();
     if (action === "list_classes") return await listClasses(body);
+    if (action === "list_upcoming") return await listUpcoming();
     if (action === "create_booking") return await createBooking(body);
     if (action === "verify_cert") return await verifyCert(body);
 
