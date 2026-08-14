@@ -276,7 +276,6 @@ function renderPay(){
   const area = document.getElementById('payArea');
   const price = selectedCourse ? Number(selectedCourse.price) : 0;
   const total = price * people;
-  document.getElementById('btnSubmit').disabled = false;
   if(!selectedClass){
     area.innerHTML = '<p class="muted">เลือกรอบอบรมก่อนเพื่อแสดง QR ชำระเงิน</p>';
     return;
@@ -335,7 +334,7 @@ async function submitBooking(){
       pdpa_consent: true, slip_base64: slipData.base64, slip_mime: slipData.mime,
     });
     if(r.ok){
-      document.getElementById('okBookingId').textContent = r.booking_id.toUpperCase();
+      document.getElementById('okBookingId').textContent = r.booking_id;
       document.getElementById('mainFlow').style.display = 'none';
       document.getElementById('successView').style.display = 'block';
       window.scrollTo({top:0, behavior:'smooth'});

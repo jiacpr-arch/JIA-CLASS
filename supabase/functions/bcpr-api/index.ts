@@ -66,6 +66,10 @@ function timingSafeEq(a: string, b: string): boolean {
 
 const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 
+// วันที่ "วันนี้" ตามเวลาไทย (UTC+7 ไม่มี DST) — ห้ามใช้ new Date().toISOString() ตรงๆ
+// เพราะได้วันที่ UTC ซึ่งช้ากว่าไทย ทำให้ช่วงเที่ยงคืน–07:00 น. รอบของ "เมื่อวาน" ยังโผล่ให้จองได้อยู่
+const thaiToday = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+
 function certExpiry(issuedAt: string): string {
   const d = new Date(issuedAt);
   d.setFullYear(d.getFullYear() + CERT_VALID_YEARS);
@@ -197,7 +201,7 @@ async function getPromptpayConfig() {
 async function listCourses() {
   const courses = await getManagedCourses();
   const bookable = courses.filter((c) => c.online_booking);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = thaiToday();
   const keys = bookable.map((c) => c.key);
   let upcomingCounts: Record<string, number> = {};
   if (keys.length) {
@@ -221,7 +225,7 @@ async function listCourses() {
 
 async function listClasses(body: Record<string, unknown>) {
   const courseKey = String(body.course_key ?? LEGACY_COURSE_KEY);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = thaiToday();
   const { data: classes, error } = await db.from("classes")
     .select("id,date,time_slot,place,max_students,note,course_key")
     .eq("course_key", courseKey).eq("status", "ready").gte("date", today)
