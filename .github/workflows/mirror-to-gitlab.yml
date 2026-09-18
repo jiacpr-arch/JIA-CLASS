@@ -1,0 +1,26 @@
+name: Mirror to GitLab
+on:
+  push:
+  delete:
+  workflow_dispatch:
+concurrency:
+  group: mirror-${{ github.repository }}
+  cancel-in-progress: false
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch every branch
+        run: |
+          git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
+          git remote set-head origin -d
+      - name: Push to GitLab (creates the project if missing)
+        env:
+          TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+          NAME: ${{ github.event.repository.name }}
+          NS: ${{ vars.GITLAB_NS || 'jiacpr' }}
+        run: |
+          git push --prune --force "https://oauth2:${TOKEN}@gitlab.com/${NS}/${NAME}.git"             'refs/remotes/origin/*:refs/heads/*' 'refs/tags/*:refs/tags/*'
