@@ -213,10 +213,16 @@ async function listCourses() {
     for (const c of classes ?? []) upcomingCounts[c.course_key] = (upcomingCounts[c.course_key] ?? 0) + 1;
   }
   const promptpay = await getPromptpayConfig();
+  // คอร์สที่รับส่วนลดด้วยเลขใบประกาศนียบัตร (ตาราง course_cert_discounts) — ให้หน้าจองรู้ว่าจะแสดงช่องกรอกโค้ดไหม
+  const { data: discRows } = await db.from("course_cert_discounts")
+    .select("course_key,amount").eq("active", true);
+  const discByCourse: Record<string, number> = {};
+  for (const d of discRows ?? []) discByCourse[d.course_key] = Math.max(discByCourse[d.course_key] ?? 0, Number(d.amount));
   return json({
     ok: true,
     ...promptpay,
     courses: bookable.map((c) => ({
+      cert_discount: discByCourse[c.key] ?? 0,
       key: c.key, label: c.label, price: Number(c.price ?? 0),
       duration_hours: Number(c.duration_hours ?? 0), total_days: c.total_days ?? 1,
       max_students: c.max_students, description: c.description ?? "",
@@ -281,6 +287,15 @@ async function listUpcoming() {
   });
 }
 
+async function checkDiscount(body: Record<string, unknown>) {
+  const courseKey = String(body.course_key ?? "");
+  const code = String(body.code ?? "").trim().toUpperCase();
+  if (!CERT_CODE_RE.test(code)) return json({ ok: true, valid: false, error: "CERT_NOT_FOUND" });
+  const { data, error } = await db.rpc("class_check_discount", { p_course_key: courseKey, p_code: code });
+  if (error) throw error;
+  return json({ ok: true, valid: !!data?.ok, amount: data?.ok ? data.amount : 0, error: data?.ok ? undefined : data?.error });
+}
+
 async function createBooking(body: Record<string, unknown>) {
   const name = String(body.name ?? "").trim();
   const tel = String(body.tel ?? "").trim();
@@ -294,6 +309,8 @@ async function createBooking(body: Record<string, unknown>) {
   // ที่มาของการจอง (utm_source จากเว็บบริวาร) — ไม่บังคับ, จำกัด charset กันข้อความแปลกปลอม
   const sourceRaw = String(body.source ?? "").trim().slice(0, 100);
   const source = /^[a-z0-9_.\-]*$/i.test(sourceRaw) ? sourceRaw : "";
+  // เลขใบประกาศนียบัตรสำหรับส่วนลด (ไม่บังคับ) — ตรวจสิทธิ์จริงใน class_create_booking
+  const discountCode = String(body.discount_code ?? "").trim().toUpperCase();
 
   if (!name || name.length > 200) return json({ ok: false, error: "INVALID_NAME" }, 400);
   if (!/^[0-9+\-() ]{8,20}$/.test(tel)) return json({ ok: false, error: "INVALID_TEL" }, 400);
@@ -301,6 +318,7 @@ async function createBooking(body: Record<string, unknown>) {
   if (!classId) return json({ ok: false, error: "INVALID_CLASS" }, 400);
   if (!Number.isInteger(people) || people < 1 || people > 10) return json({ ok: false, error: "INVALID_PEOPLE" }, 400);
   if (!pdpa) return json({ ok: false, error: "PDPA_REQUIRED" }, 400);
+  if (discountCode && !CERT_CODE_RE.test(discountCode)) return json({ ok: false, error: "DISCOUNT_CERT_NOT_FOUND" }, 400);
 
   const extByMime: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
   const ext = extByMime[slipMime];
@@ -321,6 +339,8 @@ async function createBooking(body: Record<string, unknown>) {
   const { data, error } = await db.rpc("class_create_booking", {
     p_id: bookingId, p_class_id: classId, p_name: name, p_tel: tel, p_email: email,
     p_people: people, p_note: note, p_slip_path: slipPath, p_source: source || null,
+    // ส่งเฉพาะเมื่อมีโค้ด — การจองปกติไม่พึ่ง migration ส่วนลด (deploy ลำดับไหนก็ไม่พัง)
+    ...(discountCode ? { p_discount_code: discountCode } : {}),
   });
   if (error) {
     await db.storage.from(SLIP_BUCKET).remove([slipPath]).catch(() => {});
@@ -680,6 +700,7 @@ Deno.serve(async (req: Request) => {
     if (action === "list_upcoming") return await listUpcoming();
     if (action === "create_booking") return await createBooking(body);
     if (action === "verify_cert") return await verifyCert(body);
+    if (action === "check_discount") return await checkDiscount(body);
 
     // admin
     if (action.startsWith("admin_")) {
