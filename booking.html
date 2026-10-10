@@ -110,6 +110,14 @@ input,textarea{font-family:inherit;font-size:1em;padding:11px 13px;border:1px so
     </div>
     <label>หมายเหตุ</label>
     <input id="fNote" placeholder="(ไม่บังคับ)" maxlength="500">
+    <div id="discountBox" style="display:none">
+      <label>มีใบประกาศนียบัตรออนไลน์? กรอกเลขใบเพื่อรับส่วนลด <span id="discountAmtTxt"></span></label>
+      <div style="display:flex;gap:8px">
+        <input id="fDiscount" placeholder="เช่น ACLO-2026-0001" maxlength="20" autocapitalize="characters" style="flex:1">
+        <button type="button" id="btnDiscount" onclick="applyDiscount()" style="white-space:nowrap">ใช้โค้ด</button>
+      </div>
+      <div class="muted" id="discountMsg" style="margin-top:6px"></div>
+    </div>
     <div class="total"><span>ยอดชำระทั้งหมด</span><b id="totalTxt">0 ฿</b></div>
   </div>
 
@@ -182,6 +190,7 @@ let classes = [];
 let selectedClass = null;
 let people = 1;
 let slipData = null; // {base64, mime}
+let discount = null; // {code, amount} เมื่อตรวจโค้ดส่วนลดผ่านแล้ว
 
 function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function thDate(iso){ const d=new Date(iso+'T00:00:00');
@@ -217,12 +226,18 @@ function selectCourse(key){
     <div class="d"><b>${esc(selectedCourse.label)}</b><div class="meta">${Number(selectedCourse.price).toLocaleString()} บาท/ท่าน</div></div>
   </div>`;
   document.getElementById('changeCourseLink').style.display = 'inline';
+  resetDiscount();
+  document.getElementById('discountBox').style.display = selectedCourse.cert_discount > 0 ? 'block' : 'none';
+  document.getElementById('discountAmtTxt').textContent = selectedCourse.cert_discount > 0
+    ? '(ลด ' + Number(selectedCourse.cert_discount).toLocaleString() + ' ฿)' : '';
   ['classCard','infoCard','payCard','slipCard'].forEach(id=>document.getElementById(id).style.display='block');
   selectedClass = null;
   loadClasses();
 }
 function changeCourse(){
   selectedCourse = null; selectedClass = null;
+  resetDiscount();
+  document.getElementById('discountBox').style.display = 'none';
   document.getElementById('changeCourseLink').style.display = 'none';
   ['classCard','infoCard','payCard','slipCard'].forEach(id=>document.getElementById(id).style.display='none');
   renderCourses();
@@ -278,16 +293,47 @@ function changePeople(d){
   document.getElementById('peopleN').textContent = people;
   updateTotal();
 }
-function updateTotal(){
+function currentTotal(){
   const price = selectedCourse ? Number(selectedCourse.price) : 0;
-  const total = price * people;
+  return Math.max(price * people - (discount ? discount.amount : 0), 0);
+}
+function resetDiscount(){
+  discount = null;
+  const f = document.getElementById('fDiscount'), m = document.getElementById('discountMsg');
+  if(f) f.value = '';
+  if(m) m.textContent = '';
+}
+const DISCOUNT_ERR = {
+  CERT_NOT_FOUND:'ไม่พบเลขใบประกาศนียบัตรนี้', CERT_REVOKED:'ใบประกาศนียบัตรนี้ถูกเพิกถอนแล้ว',
+  CERT_EXPIRED:'ใบประกาศนียบัตรนี้หมดอายุแล้ว', NOT_ELIGIBLE:'ใบนี้ไม่เข้าเงื่อนไขส่วนลดของคอร์สนี้',
+  ALREADY_USED:'เลขใบนี้ถูกใช้รับส่วนลดไปแล้ว', NO_CODE:'กรุณากรอกเลขใบประกาศนียบัตร'
+};
+async function applyDiscount(){
+  const m = document.getElementById('discountMsg');
+  const code = document.getElementById('fDiscount').value.trim().toUpperCase();
+  discount = null; updateTotal();
+  if(!selectedCourse) return;
+  if(!/^[A-Z]{4}-\d{4}-\d{4}$/.test(code)){ m.style.color='var(--bad)'; m.textContent = DISCOUNT_ERR.CERT_NOT_FOUND; return; }
+  m.style.color = 'var(--ink)'; m.textContent = 'กำลังตรวจสอบ…';
+  try{
+    const r = await api('check_discount', { course_key: selectedCourse.key, code });
+    if(r.ok && r.valid){
+      discount = { code, amount: Number(r.amount) };
+      m.style.color = 'var(--ok, #0a7d3c)'; m.textContent = 'ใช้ส่วนลด ' + discount.amount.toLocaleString() + ' ฿ แล้ว';
+    } else {
+      m.style.color = 'var(--bad)'; m.textContent = DISCOUNT_ERR[r.error] || 'ตรวจสอบโค้ดไม่สำเร็จ';
+    }
+  }catch(e){ m.style.color = 'var(--bad)'; m.textContent = 'ตรวจสอบโค้ดไม่สำเร็จ กรุณาลองใหม่'; }
+  updateTotal();
+}
+function updateTotal(){
+  const total = currentTotal();
   document.getElementById('totalTxt').textContent = total.toLocaleString() + ' ฿';
   renderPay();
 }
 function renderPay(){
   const area = document.getElementById('payArea');
-  const price = selectedCourse ? Number(selectedCourse.price) : 0;
-  const total = price * people;
+  const total = currentTotal();
   if(!selectedClass){
     area.innerHTML = '<p class="muted">เลือกรอบอบรมก่อนเพื่อแสดง QR ชำระเงิน</p>';
     return;
@@ -345,6 +391,7 @@ async function submitBooking(){
       people, note: document.getElementById('fNote').value.trim(),
       pdpa_consent: true, slip_base64: slipData.base64, slip_mime: slipData.mime,
       source: bookingSource() || undefined,
+      discount_code: discount ? discount.code : undefined,
     });
     if(r.ok){
       document.getElementById('okBookingId').textContent = r.booking_id;
@@ -357,6 +404,9 @@ async function submitBooking(){
     if(r.error === 'FULL'){
       msg.textContent = `ขออภัย รอบนี้เหลือที่ว่าง ${r.seats_left ?? 0} ที่ ไม่พอกับจำนวนที่จอง`;
       await loadClasses();
+    } else if(r.error && r.error.startsWith('DISCOUNT_')){
+      discount = null; updateTotal();
+      msg.textContent = (DISCOUNT_ERR[r.error.slice(9)] || 'โค้ดส่วนลดใช้ไม่ได้') + ' — ยอดชำระถูกคำนวณใหม่ กรุณาตรวจสอบก่อนโอน';
     } else if(r.error === 'CLASS_NOT_OPEN'){
       msg.textContent = 'รอบนี้ปิดรับแล้ว กรุณาเลือกรอบอื่น'; await loadClasses();
     } else if(r.error === 'SLIP_SIZE' || r.error === 'INVALID_SLIP'){
